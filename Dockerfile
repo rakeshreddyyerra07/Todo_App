@@ -7,6 +7,8 @@ COPY . /var/www/html/
 
 WORKDIR /var/www/html
 
-RUN a2enmod rewrite
+# PHP's Apache module requires prefork; ensure it is the only active MPM.
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork rewrite
 
 EXPOSE 80
