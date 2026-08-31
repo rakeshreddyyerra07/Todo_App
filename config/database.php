@@ -1,10 +1,24 @@
 <?php
 
-$host = getenv("MYSQLHOST");
-$port = getenv("MYSQLPORT");
-$user = getenv("MYSQLUSER");
-$password = getenv("MYSQLPASSWORD");
-$database = getenv("MYSQLDATABASE");
+$getEnvironmentValue = static function (array $names, string $default = ""): string {
+    foreach ($names as $name) {
+        $value = getenv($name);
+        if ($value !== false && $value !== "") {
+            return $value;
+        }
+    }
+
+    return $default;
+};
+
+$databaseUrl = $getEnvironmentValue(["DATABASE_URL", "MYSQL_URL"]);
+$urlParts = $databaseUrl !== "" ? parse_url($databaseUrl) : false;
+
+$host = $getEnvironmentValue(["MYSQLHOST", "DB_HOST"], is_array($urlParts) ? ($urlParts["host"] ?? "") : "localhost");
+$port = $getEnvironmentValue(["MYSQLPORT", "DB_PORT"], is_array($urlParts) ? (string)($urlParts["port"] ?? 3306) : "3306");
+$user = $getEnvironmentValue(["MYSQLUSER", "DB_USERNAME"], is_array($urlParts) ? urldecode($urlParts["user"] ?? "") : "root");
+$password = $getEnvironmentValue(["MYSQLPASSWORD", "DB_PASSWORD"], is_array($urlParts) ? urldecode($urlParts["pass"] ?? "") : "");
+$database = $getEnvironmentValue(["MYSQLDATABASE", "DB_DATABASE"], is_array($urlParts) ? ltrim($urlParts["path"] ?? "", "/") : "todo_app");
 
 if (
     empty($host) ||
@@ -13,7 +27,7 @@ if (
     empty($password) ||
     empty($database)
 ) {
-    die("Database environment variables are missing.");
+    die("Database configuration is missing. Set MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, and MYSQLDATABASE in the app service.");
 }
 
 $conn = new mysqli(
