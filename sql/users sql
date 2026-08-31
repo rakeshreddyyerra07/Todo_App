@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 26, 2026 at 12:59 PM
+-- Generation Time: Aug 31, 2026 at 02:58 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -44,7 +44,8 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_to
 (1, 'Rakesh Reddy', 'rakeshreddyyerra@gmail.com', '$2y$10$CmZqUjH1TS/DszQZBUu6B.Yr4G/75MFw9qjAu5xTtFWKGJh5t6fA6', NULL, NULL),
 (2, 'Rakesh Reddy Reddy', 'rakeshyerra2001@gmail.com', '$2y$10$6OfMxADvyGGsrdIu6VovZuHVOaZBc.RHrj5so36hagMASAo8EdB7S', NULL, NULL),
 (3, 'Rakesh Reddy Reddy', 'rakeshreddy2001@gmail.com', '$2y$10$L0V/RLwAEY0Lg0Js9hB/seQTD5JtSyskCt46f/EBlMIt/m9syuPBS', NULL, NULL),
-(4, 'Rakesh Reddy Reddy', 'rakeshreddy@gmail.com', '$2y$10$RBc5tIr9RmXwjY5FftBTxup8yKR9EPUEG2PNtyETWAywFqjABX3Ry', NULL, NULL);
+(4, 'Rakesh Reddy Reddy', 'rakeshreddy@gmail.com', '$2y$10$RBc5tIr9RmXwjY5FftBTxup8yKR9EPUEG2PNtyETWAywFqjABX3Ry', NULL, NULL),
+(5, 'Rakesh Reddy', 'rakeshreddy5834@gmail.com', '$2y$10$R/fgjFkfTBsy4OF.JwhhfOyrAqpucsqrzXNUDyQGIsm3kRoFRMHgy', NULL, NULL);
 
 --
 -- Indexes for dumped tables
@@ -65,7 +66,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
