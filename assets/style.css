@@ -256,7 +256,10 @@ input {
     transform: translateY(-1px);
 }
 
-/* Primary */
+/* =========================================================
+   PRIMARY
+========================================================= */
+
 .btn-primary,
 .btn-add {
     color: #ffffff;
@@ -277,7 +280,10 @@ input {
         0 10px 22px rgba(44, 124, 239, 0.30);
 }
 
-/* Edit */
+/* =========================================================
+   EDIT
+========================================================= */
+
 .btn-edit {
     background: #eef5ff;
     color: #176ce8;
@@ -288,7 +294,10 @@ input {
     background: #dfecff;
 }
 
-/* Delete */
+/* =========================================================
+   DELETE
+========================================================= */
+
 .btn-delete {
     background: #fff0f1;
     color: #ed4249;
@@ -296,6 +305,40 @@ input {
 
 .btn-delete:hover {
     background: #ffe3e5;
+}
+
+/* =========================================================
+   MARK COMPLETE - GREEN
+========================================================= */
+
+.btn-complete {
+    background: #eaf8ef !important;
+    color: #249150 !important;
+    border: 1px solid #ccebd7 !important;
+    font-weight: 600;
+}
+
+.btn-complete:hover {
+    background: #d9f2e2 !important;
+    color: #1d7d43 !important;
+    border-color: #b9e3c8 !important;
+}
+
+/* =========================================================
+   MARK INCOMPLETE - ORANGE
+========================================================= */
+
+.btn-incomplete {
+    background: #fff7e6 !important;
+    color: #c77b00 !important;
+    border: 1px solid #ffe1a8 !important;
+    font-weight: 600;
+}
+
+.btn-incomplete:hover {
+    background: #ffedc2 !important;
+    color: #a86400 !important;
+    border-color: #ffd27a !important;
 }
 
 /* =========================================================
@@ -420,11 +463,11 @@ tbody tr:hover {
 }
 
 /* =========================================================
-   STATUS
+   STATUS - ACTIVE
 ========================================================= */
 
 .status-active {
-    display: inline-flex;
+    display: inline-flex !important;
 
     align-items: center;
     justify-content: center;
@@ -433,13 +476,42 @@ tbody tr:hover {
 
     border-radius: 7px;
 
-    background: #eaf8ef;
+    background-color: #eaf8ef !important;
 
-    color: #249150;
+    color: #249150 !important;
+
+    border: 1px solid #d4f4df !important;
 
     font-size: 12px;
 
     font-weight: 700;
+}
+
+/* =========================================================
+   STATUS - INACTIVE RED
+========================================================= */
+
+.status-inactive {
+    display: inline-flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 7px 13px;
+
+    border-radius: 7px;
+
+    background-color: #fff0f1 !important;
+
+    color: #dc3545 !important;
+
+    border: 1px solid #f5c2c7 !important;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    opacity: 1 !important;
 }
 
 /* =========================================================
@@ -545,3 +617,4 @@ tbody tr:hover {
     }
 
 }
+

@@ -1,3 +1,4 @@
+```php
 <?php
 
 session_start();
@@ -7,31 +8,37 @@ require_once __DIR__ . "/../config/database.php";
 $error = "";
 
 $task = "";
+$description = "";
 $status = 1;
+$priority = "Medium";
+$progress = "Todo";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $task = trim($_POST["task"] ?? "");
+    $description = trim($_POST["description"] ?? "");
     $status = (int)($_POST["status"] ?? 1);
+    $priority = $_POST["priority"] ?? "Medium";
+    $progress = $_POST["progress"] ?? "Todo";
 
     if (empty($task)) {
 
         $error = "Please enter a task.";
 
-    } elseif (!in_array($status, [1, 2])) {
+    } elseif (!in_array($status, [1, 2]) || !in_array($priority, ["Low", "Medium", "High"], true) || !in_array($progress, ["Todo", "In Progress", "Review", "Done"], true)) {
 
         $error = "Invalid status.";
 
     } else {
 
-        $sql = "INSERT INTO tasks (task, status, addedDate, editedDate)
-                VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        $sql = "INSERT INTO tasks (task, description, status, priority, progress, addedDate, editedDate)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
 
         $stmt = $conn->prepare($sql);
 
         if ($stmt) {
 
-            $stmt->bind_param("si", $task, $status);
+            $stmt->bind_param("ssiss", $task, $description, $status, $priority, $progress);
 
             if ($stmt->execute()) {
 
@@ -108,16 +115,81 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <div class="mb-3">
 
                             <label class="form-label">
+                                Task
+                            </label>
+
+                            <input
+                                type="text"
+                                name="task"
+                                class="form-control"
+                                placeholder="Enter task"
+                                value="<?= htmlspecialchars($task) ?>"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
                                 Task Description
                             </label>
 
                             <textarea
-                                name="task"
+                                name="description"
                                 class="form-control"
                                 rows="4"
                                 placeholder="Enter task description"
-                                required
-                            ><?= htmlspecialchars($task) ?></textarea>
+                            ><?= htmlspecialchars($description) ?></textarea>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Priority
+                            </label>
+
+                            <select name="priority" class="form-select">
+
+                                <?php foreach (["Low", "Medium", "High"] as $item): ?>
+
+                                    <option
+                                        value="<?= $item ?>"
+                                        <?= $priority === $item ? "selected" : "" ?>
+                                    >
+                                        <?= $item ?>
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Task Progress
+                            </label>
+
+                            <select name="progress" class="form-select">
+
+                                <?php foreach (["Todo", "In Progress", "Review", "Done"] as $item): ?>
+
+                                    <option
+                                        value="<?= $item ?>"
+                                        <?= $progress === $item ? "selected" : "" ?>
+                                    >
+                                        <?= $item ?>
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
 
                         </div>
 
@@ -130,13 +202,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             <select name="status" class="form-select">
 
-                                <option value="1"
-                                    <?= $status == 1 ? "selected" : "" ?>>
+                                <option
+                                    value="1"
+                                    <?= $status == 1 ? "selected" : "" ?>
+                                >
                                     Active
                                 </option>
 
-                                <option value="2"
-                                    <?= $status == 2 ? "selected" : "" ?>>
+                                <option
+                                    value="2"
+                                    <?= $status == 2 ? "selected" : "" ?>
+                                >
                                     Inactive
                                 </option>
 
@@ -178,3 +254,5 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </body>
 
 </html>
+```
+

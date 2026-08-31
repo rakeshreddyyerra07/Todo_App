@@ -28,7 +28,7 @@ if ($id <= 0) {
    GET TASK
 ========================= */
 
-$sql = "SELECT id, task, status
+$sql = "SELECT id, task, status, priority, progress
         FROM tasks
         WHERE id = ?";
 
@@ -50,6 +50,8 @@ $row = $result->fetch_assoc();
 
 $task = $row["task"];
 $status = $row["status"];
+$priority = $row["priority"];
+$progress = $row["progress"];
 
 $stmt->close();
 
@@ -63,13 +65,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $task = trim($_POST["task"] ?? "");
 
     $status = (int)($_POST["status"] ?? 1);
+    $priority = $_POST["priority"] ?? "Medium";
+    $progress = $_POST["progress"] ?? "Todo";
 
 
     if (empty($task)) {
 
         $error = "Please enter a task.";
 
-    } elseif (!in_array($status, [1, 2])) {
+    } elseif (!in_array($status, [1, 2]) || !in_array($priority, ["Low", "Medium", "High"], true) || !in_array($progress, ["Todo", "In Progress", "Review", "Done"], true)) {
 
         $error = "Invalid status.";
 
@@ -78,6 +82,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $sql = "UPDATE tasks
                 SET task = ?,
                     status = ?,
+                    priority = ?,
+                    progress = ?,
                     editedDate = CURRENT_TIMESTAMP
                 WHERE id = ?";
 
@@ -85,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($stmt) {
 
-            $stmt->bind_param("sii", $task, $status, $id);
+            $stmt->bind_param("sissi", $task, $status, $priority, $progress, $id);
 
             if ($stmt->execute()) {
 
@@ -177,6 +183,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 required
                             ><?= htmlspecialchars($task) ?></textarea>
 
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-select">
+                                <?php foreach (["Low", "Medium", "High"] as $item): ?>
+                                    <option value="<?= $item ?>" <?= $priority === $item ? "selected" : "" ?>><?= $item ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Task Progress</label>
+                            <select name="progress" class="form-select">
+                                <?php foreach (["Todo", "In Progress", "Review", "Done"] as $item): ?>
+                                    <option value="<?= $item ?>" <?= $progress === $item ? "selected" : "" ?>><?= $item ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
 

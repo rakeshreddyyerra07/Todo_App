@@ -1,5 +1,4 @@
 
-
 <?php
 
 session_start();
@@ -106,6 +105,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <link rel="stylesheet" href="../assets/style.css">
 
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
 </head>
 
 <body>
@@ -122,14 +127,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <h1>Create Your Account</h1>
 
-            
-
         </div>
 
         <?php if ($error !== ""): ?>
 
             <div class="alert alert-error">
+
                 <?php echo htmlspecialchars($error); ?>
+
             </div>
 
         <?php endif; ?>
@@ -153,6 +158,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             </div>
 
+
             <div class="form-group">
 
                 <label class="form-label">
@@ -170,21 +176,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             </div>
 
+
+            <!-- PASSWORD -->
+
             <div class="form-group">
 
                 <label class="form-label">
                     Password
                 </label>
 
-                <input
-                    type="password"
-                    name="password"
-                    class="form-control"
-                    placeholder="Create a password"
-                    required
-                >
+                <div style="position:relative;">
+
+                    <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        class="form-control"
+                        placeholder="Create a password"
+                        required
+                        style="padding-right:45px;"
+                    >
+
+                    <i
+                        class="bi bi-eye"
+                        id="togglePassword"
+                        style="
+                            position:absolute;
+                            right:10px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            cursor:pointer;
+                            font-size 14px;
+                        "
+                    ></i>
+
+                </div>
 
             </div>
+
+
+            <!-- CONFIRM PASSWORD -->
 
             <div class="form-group">
 
@@ -192,15 +223,35 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Confirm Password
                 </label>
 
-                <input
-                    type="password"
-                    name="confirm_password"
-                    class="form-control"
-                    placeholder="Confirm your password"
-                    required
-                >
+                <div style="position:relative;">
+
+                    <input
+                        type="password"
+                        name="confirm_password"
+                        id="confirmPassword"
+                        class="form-control"
+                        placeholder="Confirm your password"
+                        required
+                        style="padding-right:45px;"
+                    >
+
+                    <i
+                        class="bi bi-eye"
+                        id="toggleConfirmPassword"
+                        style="
+                            position:absolute;
+                            right:10px;
+                            top:50%;
+                            transform:translateY(-50%);
+                            cursor:pointer;
+                            font-size:14px;
+                        "
+                    ></i>
+
+                </div>
 
             </div>
+
 
             <div class="checkbox-row">
 
@@ -211,13 +262,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 >
 
                 <label for="terms">
+
                     I agree to the
-                    <a href="#" class="auth-link" style="margin:0;">
+
+                    <a
+                        href="#"
+                        class="auth-link"
+                        style="margin:0;"
+                    >
                         Terms and Conditions
                     </a>
+
                 </label>
 
             </div>
+
 
             <button
                 type="submit"
@@ -229,9 +288,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         </form>
 
+
         <div class="auth-link">
 
             Already have an account?
+
             <a href="login.php">
                 Login
             </a>
@@ -242,6 +303,74 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </div>
 
+
+<script>
+
+/* =========================
+   PASSWORD EYE
+========================= */
+
+document.getElementById("togglePassword").onclick = function () {
+
+    const password =
+        document.getElementById("password");
+
+    if (password.type === "password") {
+
+        password.type = "text";
+
+        this.classList.remove("bi-eye");
+
+        this.classList.add("bi-eye-slash");
+
+    } else {
+
+        password.type = "password";
+
+        this.classList.remove("bi-eye-slash");
+
+        this.classList.add("bi-eye");
+
+    }
+
+};
+
+
+/* =========================
+   CONFIRM PASSWORD EYE
+========================= */
+
+document.getElementById("toggleConfirmPassword").onclick = function () {
+
+    const password =
+        document.getElementById("confirmPassword");
+
+    if (password.type === "password") {
+
+        password.type = "text";
+
+        this.classList.remove("bi-eye");
+
+        this.classList.add("bi-eye-slash");
+
+    } else {
+
+        password.type = "password";
+
+        this.classList.remove("bi-eye-slash");
+
+        this.classList.add("bi-eye");
+
+    }
+
+};
+
+</script>
+
+
 </body>
 
 </html>
+
+
+
