@@ -6,12 +6,16 @@ $user = getenv("MYSQLUSER");
 $password = getenv("MYSQLPASSWORD");
 $database = getenv("MYSQLDATABASE");
 
+if (!$host || !$user || !$database) {
+    die("Database environment variables are missing.");
+}
+
 $conn = new mysqli(
     $host,
     $user,
     $password,
     $database,
-    $port
+    (int)$port
 );
 
 if ($conn->connect_error) {
