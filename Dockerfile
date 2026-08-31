@@ -1,14 +1,11 @@
-FROM php:8.3-apache
+FROM php:8.2-apache
 
-# The application uses MySQLi for its database connection.
-RUN docker-php-ext-install mysqli pdo_mysql
+RUN docker-php-ext-install mysqli
 
 COPY . /var/www/html/
 
-WORKDIR /var/www/html
-
-# PHP's Apache module requires prefork; ensure it is the only active MPM.
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
-    && a2enmod mpm_prefork rewrite
+RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 80
+
+CMD ["apache2-foreground"]
