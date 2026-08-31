@@ -1,24 +1,21 @@
 <?php
 
-$severname = "localhost";
-$username= "root";
-$password= "";
-$dbname= "todo_app";
+$host = getenv("MYSQLHOST");
+$port = getenv("MYSQLPORT");
+$user = getenv("MYSQLUSER");
+$password = getenv("MYSQLPASSWORD");
+$database = getenv("MYSQLDATABASE");
 
-$conn = mysqli_connect(
-    $severname,
-    $username,
+$conn = new mysqli(
+    $host,
+    $user,
     $password,
-    $dbname
+    $database,
+    $port
 );
 
-if (!$conn) {
-
-die(
-     "Database connection failed: " . mysqli_connect_error()
-);
+if ($conn->connect_error) {
+    die("Database connection failed: " . $conn->connect_error);
 }
 
-
-?>
-
+$conn->set_charset("utf8mb4");
