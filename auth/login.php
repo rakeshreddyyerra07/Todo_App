@@ -1,4 +1,3 @@
-
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -578,7 +577,7 @@ if (
     |
     | No:
     |
-    | Browser GPS
+    | Browser GPS |
     |
     */
 
@@ -845,28 +844,6 @@ if (
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Store Login Information
-                    |--------------------------------------------------------------------------
-                    |
-                    | NEW:
-                    | These values are displayed on task/index.php
-                    |
-                    */
-
-                    $_SESSION["login_ip"] =
-                        $ipaddress;
-
-
-                    $_SESSION["login_latlang"] =
-                        $latlang;
-
-
-                    $_SESSION["login_location"] =
-                        $location;
-
-
-                    /*
-                    |--------------------------------------------------------------------------
                     | Redirect To Task Page
                     |--------------------------------------------------------------------------
                     */
@@ -1092,11 +1069,9 @@ if (
         </div>
 
 
-
         <?php if (
             isset($_GET["registered"])
         ): ?>
-
 
             <div class="alert alert-success">
 
@@ -1105,7 +1080,6 @@ if (
 
             </div>
 
-
         <?php endif; ?>
 
 
@@ -1113,9 +1087,7 @@ if (
             $error !== ""
         ): ?>
 
-
             <div class="alert alert-error">
-
 
                 <?php
 
@@ -1125,9 +1097,7 @@ if (
 
                 ?>
 
-
             </div>
-
 
         <?php endif; ?>
 
@@ -1157,7 +1127,6 @@ if (
                 name="longitude"
                 id="longitude"
             >
-
 
 
             <!--
@@ -1192,7 +1161,6 @@ if (
 
 
             </div>
-
 
 
             <!--
@@ -1237,7 +1205,6 @@ if (
 
 
             </div>
-
 
 
             <!--
@@ -1291,7 +1258,6 @@ if (
             </div>
 
 
-
             <!--
             ==========================================================
             Login Button
@@ -1311,7 +1277,6 @@ if (
 
 
         </form>
-
 
 
         <!--
@@ -1343,7 +1308,6 @@ if (
 
 
 </div>
-
 
 
 
@@ -1647,7 +1611,6 @@ loginForm.addEventListener(
 
                         }
 
-
                     },
                     100
                 );
@@ -1662,4 +1625,3 @@ loginForm.addEventListener(
 </body>
 
 </html>
-
