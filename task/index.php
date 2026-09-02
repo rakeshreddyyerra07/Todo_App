@@ -7,6 +7,20 @@ require_once __DIR__ . "/../config/database.php";
 
 
 /* =========================================================
+   LOGIN INFORMATION
+========================================================= */
+
+$loginIP =
+    $_SESSION["login_ip"] ?? "Not Available";
+
+$loginLatLang =
+    $_SESSION["login_latlang"] ?? "Not Available";
+
+$loginLocation =
+    $_SESSION["login_location"] ?? "Not Available";
+
+
+/* =========================================================
    CHECK LOGIN
 ========================================================= */
 
@@ -661,6 +675,97 @@ function getProgressClass($progress)
 
         }
 
+
+        /* =====================================================
+           LOGIN INFORMATION
+           NEW - ONLY FOR IP / LOCATION DISPLAY
+        ===================================================== */
+
+        .login-location-card {
+
+            background: #ffffff;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 12px;
+
+            padding: 18px 20px;
+
+            margin-bottom: 25px;
+
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+
+        }
+
+
+        .login-location-title {
+
+            font-size: 18px;
+
+            font-weight: 700;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .login-info-row {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 9px 0;
+
+            border-bottom: 1px solid #eeeeee;
+
+        }
+
+
+        .login-info-row:last-child {
+
+            border-bottom: none;
+
+        }
+
+
+        .login-info-label {
+
+            font-weight: 600;
+
+            min-width: 180px;
+
+        }
+
+
+        .login-info-value {
+
+            word-break: break-word;
+
+        }
+
+
+        @media (max-width: 600px) {
+
+            .login-info-row {
+
+                display: block;
+
+            }
+
+
+            .login-info-label {
+
+                display: block;
+
+                margin-bottom: 4px;
+
+            }
+
+        }
+
     </style>
 
 </head>
@@ -760,6 +865,91 @@ function getProgressClass($progress)
                 + Add Task
 
             </a>
+
+        </div>
+
+
+        <!-- =================================================
+             LOGIN INFORMATION
+             NEW
+        ================================================== -->
+
+        <div class="login-location-card">
+
+            <div class="login-location-title">
+
+                Login Information
+
+            </div>
+
+
+            <div class="login-info-row">
+
+                <span class="login-info-label">
+
+                    IP Address:
+
+                </span>
+
+                <span class="login-info-value">
+
+                    <?php
+
+                    echo htmlspecialchars(
+                        $loginIP
+                    );
+
+                    ?>
+
+                </span>
+
+            </div>
+
+
+            <div class="login-info-row">
+
+                <span class="login-info-label">
+
+                    Latitude / Longitude:
+
+                </span>
+
+                <span class="login-info-value">
+
+                    <?php
+
+                    echo htmlspecialchars(
+                        $loginLatLang
+                    );
+
+                    ?>
+
+                </span>
+
+            </div>
+
+
+            <div class="login-info-row">
+
+                <span class="login-info-label">
+
+                    Location:
+
+                </span>
+
+                <span class="login-info-value">
+
+                    <?php
+
+                    echo htmlspecialchars(
+                        $loginLocation
+                    );
+
+                    ?>
+
+                </span>
+
+            </div>
 
         </div>
 
@@ -1332,8 +1522,6 @@ function getProgressClass($progress)
 
 
                             <!-- COMPLETE COLUMN -->
-                            <!-- ONLY COMPLETE / INCOMPLETE -->
-                            <!-- NO BUTTONS HERE -->
 
                             <td>
 
@@ -1672,3 +1860,4 @@ function getProgressClass($progress)
 </body>
 
 </html>
+

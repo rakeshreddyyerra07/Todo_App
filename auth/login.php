@@ -1,3 +1,4 @@
+
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -7,6 +8,7 @@ session_start();
 require_once __DIR__ . "/../config/database.php";
 
 $error = "";
+
 $email = "";
 
 
@@ -18,68 +20,31 @@ $email = "";
 
 function getClientIP()
 {
-    /*
-    |----------------------------------------------------------------------
-    | Check common proxy headers
-    |----------------------------------------------------------------------
-    */
+    if (!empty($_SERVER["HTTP_CLIENT_IP"])) {
 
-    $headers = [
-        "HTTP_CF_CONNECTING_IP",
-        "HTTP_X_REAL_IP",
-        "HTTP_X_FORWARDED_FOR",
-        "HTTP_CLIENT_IP"
-    ];
-
-    foreach ($headers as $header) {
-
-        if (!empty($_SERVER[$header])) {
-
-            $ips = explode(",", $_SERVER[$header]);
-
-            foreach ($ips as $ip) {
-
-                $ip = trim($ip);
-
-                if (
-                    filter_var(
-                        $ip,
-                        FILTER_VALIDATE_IP,
-                        FILTER_FLAG_NO_PRIV_RANGE |
-                        FILTER_FLAG_NO_RES_RANGE
-                    )
-                ) {
-
-                    return $ip;
-                }
-            }
-        }
+        return trim(
+            $_SERVER["HTTP_CLIENT_IP"]
+        );
     }
 
 
-    /*
-    |----------------------------------------------------------------------
-    | Fallback
-    |----------------------------------------------------------------------
-    */
+    if (!empty($_SERVER["HTTP_X_FORWARDED_FOR"])) {
 
-    $remoteIP = trim(
-        $_SERVER["REMOTE_ADDR"] ?? ""
+        $forwardedIPs =
+            explode(
+                ",",
+                $_SERVER["HTTP_X_FORWARDED_FOR"]
+            );
+
+        return trim(
+            $forwardedIPs[0]
+        );
+    }
+
+
+    return trim(
+        $_SERVER["REMOTE_ADDR"] ?? "Unknown"
     );
-
-
-    if (
-        filter_var(
-            $remoteIP,
-            FILTER_VALIDATE_IP
-        )
-    ) {
-
-        return $remoteIP;
-    }
-
-
-    return "Unknown";
 }
 
 
@@ -88,51 +53,44 @@ function getClientIP()
 | Get Public IP
 |--------------------------------------------------------------------------
 |
-| If the server only sees localhost/private IP, ask ipify for the
-| public IP.
+| When using XAMPP localhost, PHP normally receives:
+|
+| 127.0.0.1
+| or
+| ::1
+|
+| In that case we get the public IP from ipify.
 |
 */
 
 function getPublicIP()
 {
-    $ip = getClientIP();
+    $ip =
+        getClientIP();
 
 
     /*
-    |----------------------------------------------------------------------
-    | If we already have a public IP
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
+    | Localhost
+    |--------------------------------------------------------------------------
     */
 
     if (
-        filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE |
-            FILTER_FLAG_NO_RES_RANGE
-        )
+        $ip === "127.0.0.1"
+        ||
+        $ip === "::1"
+        ||
+        $ip === "localhost"
     ) {
 
-        return $ip;
-    }
-
-
-    /*
-    |----------------------------------------------------------------------
-    | Get public IP from ipify
-    |----------------------------------------------------------------------
-    */
-
-    if (
-        function_exists("curl_init")
-    ) {
-
-        $curl = curl_init();
+        $curl =
+            curl_init();
 
 
         curl_setopt_array(
             $curl,
             [
+
                 CURLOPT_URL =>
                     "https://api.ipify.org?format=json",
 
@@ -146,17 +104,16 @@ function getPublicIP()
                     true,
 
                 CURLOPT_SSL_VERIFYHOST =>
-                    2,
+                    2
 
-                CURLOPT_USERAGENT =>
-                    "Todo_App/1.0"
             ]
         );
 
 
-        $response = curl_exec(
-            $curl
-        );
+        $response =
+            curl_exec(
+                $curl
+            );
 
 
         curl_close(
@@ -166,25 +123,19 @@ function getPublicIP()
 
         if (
             $response !== false
-            &&
-            !empty($response)
         ) {
 
-            $data = json_decode(
-                $response,
-                true
-            );
+            $data =
+                json_decode(
+                    $response,
+                    true
+                );
 
 
             if (
                 is_array($data)
                 &&
                 !empty($data["ip"])
-                &&
-                filter_var(
-                    $data["ip"],
-                    FILTER_VALIDATE_IP
-                )
             ) {
 
                 return trim(
@@ -194,12 +145,6 @@ function getPublicIP()
         }
     }
 
-
-    /*
-    |----------------------------------------------------------------------
-    | Return original IP if public lookup failed
-    |----------------------------------------------------------------------
-    */
 
     return $ip;
 }
@@ -214,41 +159,43 @@ function getPublicIP()
 function getIPLocation($ip)
 {
     $city = "";
+
     $state = "";
+
     $country = "";
 
 
     /*
-    |----------------------------------------------------------------------
-    | Cannot geolocate local/private IP
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
+    | Invalid IP
+    |--------------------------------------------------------------------------
     */
 
     if (
         empty($ip)
         ||
         $ip === "Unknown"
-        ||
-        !filter_var(
-            $ip,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE |
-            FILTER_FLAG_NO_RES_RANGE
-        )
     ) {
 
         return [
-            "city" => "",
-            "state" => "",
-            "country" => ""
+
+            "city" =>
+                "",
+
+            "state" =>
+                "",
+
+            "country" =>
+                ""
+
         ];
     }
 
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | IP Location API
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     */
 
     $url =
@@ -259,24 +206,14 @@ function getIPLocation($ip)
         "/json/";
 
 
-    if (
-        !function_exists("curl_init")
-    ) {
-
-        return [
-            "city" => "",
-            "state" => "",
-            "country" => ""
-        ];
-    }
-
-
-    $curl = curl_init();
+    $curl =
+        curl_init();
 
 
     curl_setopt_array(
         $curl,
         [
+
             CURLOPT_URL =>
                 $url,
 
@@ -286,9 +223,6 @@ function getIPLocation($ip)
             CURLOPT_TIMEOUT =>
                 10,
 
-            CURLOPT_CONNECTTIMEOUT =>
-                5,
-
             CURLOPT_USERAGENT =>
                 "Todo_App/1.0",
 
@@ -297,13 +231,15 @@ function getIPLocation($ip)
 
             CURLOPT_SSL_VERIFYHOST =>
                 2
+
         ]
     );
 
 
-    $response = curl_exec(
-        $curl
-    );
+    $response =
+        curl_exec(
+            $curl
+        );
 
 
     curl_close(
@@ -312,9 +248,9 @@ function getIPLocation($ip)
 
 
     /*
-    |----------------------------------------------------------------------
-    | Process API response
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
+    | Process Response
+    |--------------------------------------------------------------------------
     */
 
     if (
@@ -323,10 +259,11 @@ function getIPLocation($ip)
         !empty($response)
     ) {
 
-        $data = json_decode(
-            $response,
-            true
-        );
+        $data =
+            json_decode(
+                $response,
+                true
+            );
 
 
         if (
@@ -354,17 +291,40 @@ function getIPLocation($ip)
 
 
     return [
-        "city" => $city,
-        "state" => $state,
-        "country" => $country
+
+        "city" =>
+            $city,
+
+        "state" =>
+            $state,
+
+        "country" =>
+            $country
+
     ];
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Save Login Log
+| Save Login Attempt
 |--------------------------------------------------------------------------
+|
+| Existing table:
+|
+| login_logs
+|
+| Columns:
+|
+| emailaddress
+| ipaddress
+| latlang
+| location
+| last_attempted_time
+| status
+|
+| Password is NEVER stored.
+|
 */
 
 function saveLoginLog(
@@ -376,6 +336,12 @@ function saveLoginLog(
     $status
 ) {
 
+    $last_attempted_time =
+        date(
+            "Y-m-d H:i:s"
+        );
+
+
     $sql = "
         INSERT INTO login_logs
         (
@@ -386,14 +352,15 @@ function saveLoginLog(
             last_attempted_time,
             status
         )
-        VALUES (?, ?, ?, ?, NOW(), ?)
+        VALUES (?, ?, ?, ?, ?, ?)
     ";
 
 
-    $stmt = mysqli_prepare(
-        $conn,
-        $sql
-    );
+    $stmt =
+        mysqli_prepare(
+            $conn,
+            $sql
+        );
 
 
     if (!$stmt) {
@@ -410,11 +377,12 @@ function saveLoginLog(
 
     mysqli_stmt_bind_param(
         $stmt,
-        "sssss",
+        "ssssss",
         $email,
         $ipaddress,
         $latlang,
         $location,
+        $last_attempted_time,
         $status
     );
 
@@ -469,9 +437,10 @@ if (
     $_SERVER["REQUEST_METHOD"] === "POST"
 ) {
 
+
     /*
     |--------------------------------------------------------------------------
-    | Email
+    | Get Email
     |--------------------------------------------------------------------------
     */
 
@@ -483,7 +452,7 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | Password
+    | Get Password
     |--------------------------------------------------------------------------
     */
 
@@ -493,7 +462,7 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | Get IP
+    | Get IP Address
     |--------------------------------------------------------------------------
     */
 
@@ -503,7 +472,7 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | Browser GPS
+    | Get Browser Latitude
     |--------------------------------------------------------------------------
     */
 
@@ -513,11 +482,23 @@ if (
         );
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | Get Browser Longitude
+    |--------------------------------------------------------------------------
+    */
+
     $longitude =
         trim(
             $_POST["longitude"] ?? ""
         );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Check Browser GPS
+    |--------------------------------------------------------------------------
+    */
 
     $hasBrowserLocation =
         (
@@ -533,7 +514,38 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | Save GPS coordinates
+    | Get Location From IP
+    |--------------------------------------------------------------------------
+    |
+    | This is used to get:
+    |
+    | City
+    | State
+    | Country
+    |
+    */
+
+    $ipLocation =
+        getIPLocation(
+            $ipaddress
+        );
+
+
+    $city =
+        $ipLocation["city"];
+
+
+    $state =
+        $ipLocation["state"];
+
+
+    $country =
+        $ipLocation["country"];
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Latitude + Longitude
     |--------------------------------------------------------------------------
     */
 
@@ -557,32 +569,17 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | Get IP Location
-    |--------------------------------------------------------------------------
-    */
-
-    $ipLocation =
-        getIPLocation(
-            $ipaddress
-        );
-
-
-    $city =
-        $ipLocation["city"] ?? "";
-
-
-    $state =
-        $ipLocation["state"] ?? "";
-
-
-    $country =
-        $ipLocation["country"] ?? "";
-
-
-    /*
-    |--------------------------------------------------------------------------
     | Build Location
     |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    |
+    | Only City, State, Country will be stored.
+    |
+    | No:
+    |
+    | Browser GPS
+    |
     */
 
     $locationParts = [];
@@ -648,6 +645,12 @@ if (
             "Please enter your email and password.";
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | Save Failed Attempt
+        |--------------------------------------------------------------------------
+        */
+
         saveLoginLog(
             $conn,
             $email,
@@ -656,6 +659,7 @@ if (
             $location,
             "FAILED"
         );
+
 
     } elseif (
         !filter_var(
@@ -668,6 +672,12 @@ if (
             "Please enter a valid email address.";
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | Save Failed Attempt
+        |--------------------------------------------------------------------------
+        */
+
         saveLoginLog(
             $conn,
             $email,
@@ -677,7 +687,9 @@ if (
             "FAILED"
         );
 
+
     } else {
+
 
         /*
         |--------------------------------------------------------------------------
@@ -717,6 +729,13 @@ if (
 
         } else {
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | Bind Email
+            |--------------------------------------------------------------------------
+            */
+
             mysqli_stmt_bind_param(
                 $stmt,
                 "s",
@@ -724,10 +743,22 @@ if (
             );
 
 
+            /*
+            |--------------------------------------------------------------------------
+            | Execute Query
+            |--------------------------------------------------------------------------
+            */
+
             mysqli_stmt_execute(
                 $stmt
             );
 
+
+            /*
+            |--------------------------------------------------------------------------
+            | Get Result
+            |--------------------------------------------------------------------------
+            */
 
             $result =
                 mysqli_stmt_get_result(
@@ -766,9 +797,10 @@ if (
                     )
                 ) {
 
+
                     /*
                     |--------------------------------------------------------------------------
-                    | Successful Login
+                    | SUCCESSFUL LOGIN
                     |--------------------------------------------------------------------------
                     */
 
@@ -795,7 +827,7 @@ if (
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Session Data
+                    | Store Session
                     |--------------------------------------------------------------------------
                     */
 
@@ -813,7 +845,29 @@ if (
 
                     /*
                     |--------------------------------------------------------------------------
-                    | Redirect
+                    | Store Login Information
+                    |--------------------------------------------------------------------------
+                    |
+                    | NEW:
+                    | These values are displayed on task/index.php
+                    |
+                    */
+
+                    $_SESSION["login_ip"] =
+                        $ipaddress;
+
+
+                    $_SESSION["login_latlang"] =
+                        $latlang;
+
+
+                    $_SESSION["login_location"] =
+                        $location;
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Redirect To Task Page
                     |--------------------------------------------------------------------------
                     */
 
@@ -826,9 +880,22 @@ if (
 
                 } else {
 
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Wrong Password
+                    |--------------------------------------------------------------------------
+                    */
+
                     $error =
                         "Invalid email or password.";
 
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Save Failed Attempt
+                    |--------------------------------------------------------------------------
+                    */
 
                     saveLoginLog(
                         $conn,
@@ -843,9 +910,22 @@ if (
 
             } else {
 
+
+                /*
+                |--------------------------------------------------------------------------
+                | Email Does Not Exist
+                |--------------------------------------------------------------------------
+                */
+
                 $error =
                     "Invalid email or password.";
 
+
+                /*
+                |--------------------------------------------------------------------------
+                | Save Failed Attempt
+                |--------------------------------------------------------------------------
+                */
 
                 saveLoginLog(
                     $conn,
@@ -876,53 +956,99 @@ if (
 
     <meta charset="UTF-8">
 
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
 
+
     <title>
         Login - Todo App
     </title>
+
 
     <link
         rel="stylesheet"
         href="../assets/style.css"
     >
 
+
     <style>
 
+        /*
+        --------------------------------------------------------------
+        Password Eye Icon
+        --------------------------------------------------------------
+        */
+
         .password-wrapper {
+
             position: relative;
+
         }
+
 
         .password-wrapper .form-control {
+
             padding-right: 40px;
+
         }
+
 
         .password-eye {
+
             position: absolute;
+
             right: 12px;
+
             top: 50%;
-            transform: translateY(-50%);
+
+            transform:
+                translateY(-50%);
+
             width: 18px;
+
             height: 12px;
-            border: 1.5px solid #777;
-            border-radius: 50% / 60%;
+
+            border:
+                1.5px solid #777;
+
+            border-radius:
+                50% / 60%;
+
             cursor: pointer;
-            box-sizing: border-box;
+
+            box-sizing:
+                border-box;
+
         }
 
+
         .password-eye::after {
+
             content: "";
+
             position: absolute;
+
             width: 5px;
+
             height: 5px;
+
             background: #777;
+
             border-radius: 50%;
+
             left: 50%;
+
             top: 50%;
-            transform: translate(-50%, -50%);
+
+            transform:
+                translate(
+                    -50%,
+                    -50%
+                );
+
         }
 
     </style>
@@ -932,30 +1058,45 @@ if (
 
 <body>
 
+
 <div class="auth-page">
+
 
     <div class="auth-card">
 
+
         <div class="auth-header">
 
+
             <div class="auth-icon">
+
                 🔒
+
             </div>
 
+
             <h1>
+
                 Welcome Back! 👋
+
             </h1>
 
+
             <p>
+
                 Login to continue to your account.
+
             </p>
 
+
         </div>
+
 
 
         <?php if (
             isset($_GET["registered"])
         ): ?>
+
 
             <div class="alert alert-success">
 
@@ -964,6 +1105,7 @@ if (
 
             </div>
 
+
         <?php endif; ?>
 
 
@@ -971,15 +1113,21 @@ if (
             $error !== ""
         ): ?>
 
+
             <div class="alert alert-error">
 
+
                 <?php
+
                 echo htmlspecialchars(
                     $error
                 );
+
                 ?>
 
+
             </div>
+
 
         <?php endif; ?>
 
@@ -989,11 +1137,20 @@ if (
             id="loginForm"
         >
 
+
+            <!--
+            ==========================================================
+            Browser Location
+            ==========================================================
+            -->
+
+
             <input
                 type="hidden"
                 name="latitude"
                 id="latitude"
             >
+
 
             <input
                 type="hidden"
@@ -1002,11 +1159,23 @@ if (
             >
 
 
+
+            <!--
+            ==========================================================
+            Email
+            ==========================================================
+            -->
+
+
             <div class="form-group">
 
+
                 <label class="form-label">
+
                     Email Address
+
                 </label>
+
 
                 <input
                     type="email"
@@ -1021,16 +1190,30 @@ if (
                     required
                 >
 
+
             </div>
+
+
+
+            <!--
+            ==========================================================
+            Password
+            ==========================================================
+            -->
 
 
             <div class="form-group">
 
+
                 <label class="form-label">
+
                     Password
+
                 </label>
 
+
                 <div class="password-wrapper">
+
 
                     <input
                         type="password"
@@ -1041,6 +1224,7 @@ if (
                         required
                     >
 
+
                     <span
                         class="password-eye"
                         id="toggleLoginPassword"
@@ -1048,15 +1232,26 @@ if (
                         title="Show password"
                     ></span>
 
+
                 </div>
 
+
             </div>
+
+
+
+            <!--
+            ==========================================================
+            Remember + Forgot Password
+            ==========================================================
+            -->
 
 
             <div
                 class="checkbox-row"
                 style="justify-content:space-between;"
             >
+
 
                 <div
                     style="
@@ -1066,24 +1261,42 @@ if (
                     "
                 >
 
+
                     <input
                         type="checkbox"
                         name="remember"
                         id="remember"
                     >
 
+
                     <label for="remember">
+
                         Remember me
+
                     </label>
+
 
                 </div>
 
 
-                <a href="forgot_password.php">
+                <a
+                    href="forgot_password.php"
+                >
+
                     Forgot Password?
+
                 </a>
 
+
             </div>
+
+
+
+            <!--
+            ==========================================================
+            Login Button
+            ==========================================================
+            -->
 
 
             <button
@@ -1091,28 +1304,51 @@ if (
                 class="btn btn-primary"
                 style="width:100%; height:48px;"
             >
+
                 Login
+
             </button>
+
 
         </form>
 
 
+
+        <!--
+        ==========================================================
+        Create Account
+        ==========================================================
+        -->
+
+
         <div class="auth-link">
+
 
             Don't have an account?
 
-            <a href="register.php">
+
+            <a
+                href="register.php"
+            >
+
                 Create Account
+
             </a>
+
 
         </div>
 
+
     </div>
+
 
 </div>
 
 
+
+
 <script>
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1122,21 +1358,26 @@ if (
 
 function toggleLoginPassword()
 {
+
     const password =
         document.getElementById(
             "loginPassword"
         );
 
+
     if (
         password.type === "password"
     ) {
 
-        password.type = "text";
+        password.type =
+            "text";
 
     } else {
 
-        password.type = "password";
+        password.type =
+            "password";
     }
+
 }
 
 
@@ -1152,87 +1393,196 @@ const loginForm =
     );
 
 
-let locationCollected = false;
+/*
+|--------------------------------------------------------------------------
+| Location Status
+|--------------------------------------------------------------------------
+*/
+
+let locationCollected =
+    false;
 
 
 /*
 |--------------------------------------------------------------------------
-| Request Browser GPS
+| Request Browser Location
 |--------------------------------------------------------------------------
 */
 
 function requestBrowserLocation()
 {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Browser does not support Geolocation
+    |--------------------------------------------------------------------------
+    */
+
     if (
         !navigator.geolocation
     ) {
 
-        locationCollected = true;
+        console.log(
+            "Geolocation is not supported."
+        );
+
+
+        /*
+        | PHP will use IP fallback.
+        */
+
+        locationCollected =
+            true;
+
 
         return;
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | Ask Browser Permission
+    |--------------------------------------------------------------------------
+    */
+
     navigator.geolocation.getCurrentPosition(
 
         function(position) {
 
+
+            /*
+            --------------------------------------------------------------
+            | Permission Granted
+            --------------------------------------------------------------
+            */
+
+            const latitude =
+                position.coords.latitude;
+
+
+            const longitude =
+                position.coords.longitude;
+
+
+            /*
+            --------------------------------------------------------------
+            | Put Coordinates Into Hidden Fields
+            --------------------------------------------------------------
+            */
+
             document.getElementById(
                 "latitude"
             ).value =
-                position.coords.latitude;
+                latitude;
 
 
             document.getElementById(
                 "longitude"
             ).value =
-                position.coords.longitude;
+                longitude;
 
 
             console.log(
-                "GPS:",
-                position.coords.latitude,
-                position.coords.longitude
+                "Browser GPS Latitude:",
+                latitude
             );
 
 
-            locationCollected = true;
+            console.log(
+                "Browser GPS Longitude:",
+                longitude
+            );
 
-        },
-
-        function(error) {
 
             console.log(
-                "Browser GPS unavailable:",
-                error.message
+                "Browser location permission granted."
             );
 
 
             /*
-            | PHP will use IP location.
+            --------------------------------------------------------------
+            | Location Completed
+            --------------------------------------------------------------
             */
 
-            locationCollected = true;
+            locationCollected =
+                true;
 
         },
 
+
+        function(error) {
+
+
+            /*
+            --------------------------------------------------------------
+            | Permission Denied / Timeout / Error
+            --------------------------------------------------------------
+            |
+            | We don't stop login.
+            |
+            | PHP will capture IP address and use IP-based location.
+            |
+            --------------------------------------------------------------
+            */
+
+            console.log(
+                "Browser location unavailable."
+            );
+
+
+            console.log(
+                "Reason:",
+                error.message
+            );
+
+
+            console.log(
+                "Using PHP IP address fallback."
+            );
+
+
+            locationCollected =
+                true;
+
+        },
+
+
         {
 
-            enableHighAccuracy: true,
+            /*
+            | Request accurate location
+            */
 
-            timeout: 10000,
+            enableHighAccuracy:
+                true,
 
-            maximumAge: 0
+
+            /*
+            | Maximum waiting time
+            */
+
+            timeout:
+                10000,
+
+
+            /*
+            | Do not use cached location
+            */
+
+            maximumAge:
+                0
 
         }
+
     );
+
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Start GPS Request
+| Start Location Request
 |--------------------------------------------------------------------------
 */
 
@@ -1241,13 +1591,21 @@ requestBrowserLocation();
 
 /*
 |--------------------------------------------------------------------------
-| Submit Form
+| Submit Login
+|--------------------------------------------------------------------------
+|
+| Wait for browser location request to finish.
+|
+| If the user denies permission, locationCollected becomes true and
+| the form continues.
+|
 |--------------------------------------------------------------------------
 */
 
 loginForm.addEventListener(
     "submit",
     function(event) {
+
 
         if (
             !locationCollected
@@ -1256,9 +1614,15 @@ loginForm.addEventListener(
             event.preventDefault();
 
 
+            console.log(
+                "Waiting for location..."
+            );
+
+
             const waitForLocation =
                 setInterval(
                     function() {
+
 
                         if (
                             locationCollected
@@ -1269,8 +1633,20 @@ loginForm.addEventListener(
                             );
 
 
+                            console.log(
+                                "Submitting login..."
+                            );
+
+
+                            /*
+                            | Native submit avoids triggering this
+                            | submit event again.
+                            */
+
                             loginForm.submit();
+
                         }
+
 
                     },
                     100
@@ -1286,3 +1662,4 @@ loginForm.addEventListener(
 </body>
 
 </html>
+
