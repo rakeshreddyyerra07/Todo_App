@@ -1,17 +1,17 @@
 <?php
 
-$servername = getenv("db.fr-roub1.bengt.wasmernet.com");
-$username   = getenv("user_6c0af212");
-$password   = getenv("Dpw_LtxQbMJ30UpOdtcFibygjflYPE8wVzuC");
-$dbname     = getenv("db_100af6ff);
-$port       = getenv("20184);
+$servername = "db.fr-roub1.bengt.wasmernet.com";
+$username   = "user_6c0af212";
+$password   = "pw_LtxQbMJ30UpOdtcFibygjflYPE8wVzuC";
+$dbname     = "db_100af6ff";
+$port       = 20184;
 
 $conn = mysqli_connect(
     $servername,
     $username,
     $password,
     $dbname,
-    (int)$port
+    $port
 );
 
 if (!$conn) {
