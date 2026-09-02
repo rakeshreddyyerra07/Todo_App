@@ -20,4 +20,3 @@ if (!$conn) {
 
 $conn->set_charset("utf8mb4");
 
-?>
