@@ -38,7 +38,7 @@ function getClientIP()
         );
 
         /*
-        | Use first forwarded IP
+        | Use first valid forwarded IP
         */
         foreach ($forwardedIPs as $forwardedIP) {
 
@@ -71,16 +71,8 @@ function getClientIP()
 |
 | Localhost/private IPs are NOT saved.
 |
-| Examples:
-|
-| 127.0.0.1
-| 127.0.0.100
-| ::1
-| 192.168.x.x
-| 10.x.x.x
-| 172.16.x.x - 172.31.x.x
-|
-| For these, we ask ipify for the current public IP.
+| For private/local IPs, ipify is used to obtain the
+| current public IP address.
 |
 |--------------------------------------------------------------------------
 */
@@ -185,7 +177,6 @@ function getPublicIP()
 | city
 | state
 | country
-| timezone
 |
 |--------------------------------------------------------------------------
 */
@@ -195,7 +186,6 @@ function getIPLocation($ip)
     $city = "";
     $state = "";
     $country = "";
-    $timezone = "";
 
 
     /*
@@ -215,9 +205,6 @@ function getIPLocation($ip)
                 "",
 
             "country" =>
-                "",
-
-            "timezone" =>
                 ""
         ];
     }
@@ -301,15 +288,6 @@ function getIPLocation($ip)
                 trim(
                     $data["country_name"] ?? ""
                 );
-
-
-            /*
-            | IP based timezone
-            */
-            $timezone =
-                trim(
-                    $data["timezone"] ?? ""
-                );
         }
     }
 
@@ -322,85 +300,8 @@ function getIPLocation($ip)
             $state,
 
         "country" =>
-            $country,
-
-        "timezone" =>
-            $timezone
+            $country
     ];
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Validate Timezone
-|--------------------------------------------------------------------------
-*/
-
-function isValidTimezone($timezone)
-{
-    if (
-        empty($timezone)
-    ) {
-        return false;
-    }
-
-    return in_array(
-        $timezone,
-        DateTimeZone::listIdentifiers(),
-        true
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Get Login Date/Time In User Timezone
-|--------------------------------------------------------------------------
-*/
-
-function getUserDateTime($timezone)
-{
-    /*
-    | If browser timezone is valid
-    */
-    if (
-        isValidTimezone($timezone)
-    ) {
-
-        try {
-
-            $date = new DateTime(
-                "now",
-                new DateTimeZone($timezone)
-            );
-
-            return $date->format(
-                "Y-m-d H:i:s"
-            );
-
-        } catch (
-            Exception $e
-        ) {
-            // Continue to fallback
-        }
-    }
-
-
-    /*
-    | Fallback to India timezone
-    |
-    | This is only used if the browser timezone
-    | and IP timezone cannot be detected.
-    */
-    $date = new DateTime(
-        "now",
-        new DateTimeZone("Asia/Kolkata")
-    );
-
-
-    return $date->format(
-        "Y-m-d H:i:s"
-    );
 }
 
 
@@ -409,16 +310,17 @@ function getUserDateTime($timezone)
 | Save Login Attempt
 |--------------------------------------------------------------------------
 |
-| Saves:
+| Database columns used:
 |
 | emailaddress
 | ipaddress
 | latlang
 | location
-| timezone
 | last_attempted_time
-| added_date
 | status
+|
+| The database column "addedDate" is NOT included because
+| MySQL automatically fills it using CURRENT_TIMESTAMP.
 |
 |--------------------------------------------------------------------------
 */
@@ -429,29 +331,19 @@ function saveLoginLog(
     $ipaddress,
     $latlang,
     $location,
-    $timezone,
     $status
 ) {
 
     /*
-    | Generate local time based on user's timezone
+    | Current server date/time
     */
     $loginDateTime =
-        getUserDateTime(
-            $timezone
-        );
+        date("Y-m-d H:i:s");
 
 
     /*
     |--------------------------------------------------------------------------
-    | IMPORTANT
-    |--------------------------------------------------------------------------
-    |
-    | The database table must contain:
-    |
-    | timezone
-    | added_date
-    |
+    | Insert Login Log
     |--------------------------------------------------------------------------
     */
 
@@ -462,12 +354,10 @@ function saveLoginLog(
             ipaddress,
             latlang,
             location,
-            timezone,
             last_attempted_time,
-            added_date,
             status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
     ";
 
 
@@ -478,6 +368,9 @@ function saveLoginLog(
         );
 
 
+    /*
+    | Prepare failed
+    */
     if (!$stmt) {
 
         error_log(
@@ -489,20 +382,24 @@ function saveLoginLog(
     }
 
 
+    /*
+    | Bind values
+    */
     mysqli_stmt_bind_param(
         $stmt,
-        "ssssssss",
+        "ssssss",
         $email,
         $ipaddress,
         $latlang,
         $location,
-        $timezone,
-        $loginDateTime,
         $loginDateTime,
         $status
     );
 
 
+    /*
+    | Execute insert
+    */
     if (
         !mysqli_stmt_execute(
             $stmt
@@ -516,6 +413,9 @@ function saveLoginLog(
     }
 
 
+    /*
+    | Close statement
+    */
     mysqli_stmt_close(
         $stmt
     );
@@ -576,7 +476,7 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | CURRENT PUBLIC IP
+    | Current Public IP
     |--------------------------------------------------------------------------
     */
 
@@ -604,26 +504,6 @@ if (
 
     /*
     |--------------------------------------------------------------------------
-    | Browser Timezone
-    |--------------------------------------------------------------------------
-    |
-    | JavaScript sends something like:
-    |
-    | Asia/Kolkata
-    | America/New_York
-    | Europe/London
-    |
-    |--------------------------------------------------------------------------
-    */
-
-    $browserTimezone =
-        trim(
-            $_POST["timezone"] ?? ""
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
     | Get IP Location
     |--------------------------------------------------------------------------
     */
@@ -644,49 +524,6 @@ if (
 
     $country =
         $ipLocation["country"];
-
-
-    $ipTimezone =
-        $ipLocation["timezone"];
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Choose User Timezone
-    |--------------------------------------------------------------------------
-    |
-    | Priority:
-    |
-    | 1. Browser timezone
-    | 2. IP timezone
-    | 3. Asia/Kolkata fallback
-    |
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        isValidTimezone(
-            $browserTimezone
-        )
-    ) {
-
-        $userTimezone =
-            $browserTimezone;
-
-    } elseif (
-        isValidTimezone(
-            $ipTimezone
-        )
-    ) {
-
-        $userTimezone =
-            $ipTimezone;
-
-    } else {
-
-        $userTimezone =
-            "Asia/Kolkata";
-    }
 
 
     /*
@@ -794,13 +631,15 @@ if (
             "Please enter your email and password.";
 
 
+        /*
+        | Log failed attempt
+        */
         saveLoginLog(
             $conn,
             $email,
             $ipaddress,
             $latlang,
             $location,
-            $userTimezone,
             "FAILED"
         );
 
@@ -816,13 +655,15 @@ if (
             "Please enter a valid email address.";
 
 
+        /*
+        | Log failed attempt
+        */
         saveLoginLog(
             $conn,
             $email,
             $ipaddress,
             $latlang,
             $location,
-            $userTimezone,
             "FAILED"
         );
 
@@ -851,24 +692,32 @@ if (
             );
 
 
+        /*
+        | Database query preparation failed
+        */
         if (!$stmt) {
 
             $error =
                 "Something went wrong. Please try again.";
 
 
+            /*
+            | Log failed attempt
+            */
             saveLoginLog(
                 $conn,
                 $email,
                 $ipaddress,
                 $latlang,
                 $location,
-                $userTimezone,
                 "FAILED"
             );
 
         } else {
 
+            /*
+            | Bind email
+            */
             mysqli_stmt_bind_param(
                 $stmt,
                 "s",
@@ -876,11 +725,17 @@ if (
             );
 
 
+            /*
+            | Execute query
+            */
             mysqli_stmt_execute(
                 $stmt
             );
 
 
+            /*
+            | Get result
+            */
             $result =
                 mysqli_stmt_get_result(
                     $stmt
@@ -929,7 +784,6 @@ if (
                         $ipaddress,
                         $latlang,
                         $location,
-                        $userTimezone,
                         "SUCCESS"
                     );
 
@@ -982,13 +836,15 @@ if (
                         "Invalid email or password.";
 
 
+                    /*
+                    | Log failed attempt
+                    */
                     saveLoginLog(
                         $conn,
                         $email,
                         $ipaddress,
                         $latlang,
                         $location,
-                        $userTimezone,
                         "FAILED"
                     );
                 }
@@ -1006,18 +862,23 @@ if (
                     "Invalid email or password.";
 
 
+                /*
+                | Log failed attempt
+                */
                 saveLoginLog(
                     $conn,
                     $email,
                     $ipaddress,
                     $latlang,
                     $location,
-                    $userTimezone,
                     "FAILED"
                 );
             }
 
 
+            /*
+            | Close user query
+            */
             mysqli_stmt_close(
                 $stmt
             );
@@ -1166,15 +1027,6 @@ if (
                 type="hidden"
                 name="longitude"
                 id="longitude"
-            >
-
-
-            <!-- Browser Timezone -->
-
-            <input
-                type="hidden"
-                name="timezone"
-                id="timezone"
             >
 
 
@@ -1361,81 +1213,12 @@ let locationCollected =
 
 /*
 |--------------------------------------------------------------------------
-| Get Browser Timezone
-|--------------------------------------------------------------------------
-|
-| Example:
-|
-| Asia/Kolkata
-| America/New_York
-| Europe/London
-|
-|--------------------------------------------------------------------------
-*/
-
-function getBrowserTimezone()
-{
-
-    try {
-
-        const timezone =
-            Intl.DateTimeFormat()
-                .resolvedOptions()
-                .timeZone;
-
-
-        if (
-            timezone
-        ) {
-
-            document.getElementById(
-                "timezone"
-            ).value =
-                timezone;
-
-
-            console.log(
-                "Browser Timezone:",
-                timezone
-            );
-
-            return;
-        }
-
-    } catch (
-        error
-    ) {
-
-        console.log(
-            "Timezone detection failed."
-        );
-    }
-
-
-    /*
-    | Fallback
-    */
-    document.getElementById(
-        "timezone"
-    ).value =
-        "";
-}
-
-
-/*
-|--------------------------------------------------------------------------
 | Request Browser GPS
 |--------------------------------------------------------------------------
 */
 
 function requestBrowserLocation()
 {
-
-    /*
-    | Get timezone immediately
-    */
-    getBrowserTimezone();
-
 
     /*
     | Browser doesn't support GPS
@@ -1534,7 +1317,6 @@ function requestBrowserLocation()
             |
             | Public IP
             | IP location
-            | Browser timezone
             |
             */
             locationCollected =
@@ -1559,7 +1341,7 @@ function requestBrowserLocation()
 
 /*
 |--------------------------------------------------------------------------
-| Start GPS + Timezone Detection
+| Start GPS Detection
 |--------------------------------------------------------------------------
 */
 
@@ -1629,4 +1411,4 @@ loginForm.addEventListener(
 </body>
 
 </html>
-
+```
