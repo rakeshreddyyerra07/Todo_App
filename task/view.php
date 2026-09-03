@@ -1,4 +1,3 @@
-
 <?php
 
 session_start();
@@ -23,7 +22,6 @@ if (!isset($_SESSION["user_id"])) {
 ========================================================= */
 
 $id = (int)($_GET["id"] ?? 0);
-
 
 if ($id <= 0) {
 
@@ -50,29 +48,39 @@ $sql = "
         editedDate
     FROM tasks
     WHERE id = ?
+    LIMIT 1
 ";
-
 
 $stmt = mysqli_prepare($conn, $sql);
 
-
 if (!$stmt) {
 
-    die("Database Error: " . mysqli_error($conn));
+    die(
+        "Database Error: " .
+        htmlspecialchars(mysqli_error($conn))
+    );
 
 }
 
-
 mysqli_stmt_bind_param($stmt, "i", $id);
 
-mysqli_stmt_execute($stmt);
+if (!mysqli_stmt_execute($stmt)) {
+
+    die(
+        "Database Error: " .
+        htmlspecialchars(mysqli_stmt_error($stmt))
+    );
+
+}
 
 $result = mysqli_stmt_get_result($stmt);
 
-
 if (!$result) {
 
-    die("Database Error: " . mysqli_error($conn));
+    die(
+        "Database Error: " .
+        htmlspecialchars(mysqli_error($conn))
+    );
 
 }
 
@@ -83,11 +91,12 @@ if (!$result) {
 
 if (mysqli_num_rows($result) === 0) {
 
+    mysqli_stmt_close($stmt);
+
     header("Location: index.php?error=1");
     exit();
 
 }
-
 
 $task = mysqli_fetch_assoc($result);
 
@@ -189,7 +198,7 @@ function getProgressClass($progress)
     <style>
 
         /* =====================================================
-           VIEW PAGE
+           VIEW CARD
         ===================================================== */
 
         .view-card {
@@ -200,6 +209,10 @@ function getProgressClass($progress)
 
         }
 
+
+        /* =====================================================
+           TASK TITLE
+        ===================================================== */
 
         .task-title {
 
@@ -214,6 +227,10 @@ function getProgressClass($progress)
         }
 
 
+        /* =====================================================
+           TASK DESCRIPTION
+        ===================================================== */
+
         .task-description {
 
             color: #74809c;
@@ -226,6 +243,10 @@ function getProgressClass($progress)
 
         }
 
+
+        /* =====================================================
+           DETAIL ROW
+        ===================================================== */
 
         .detail-row {
 
@@ -306,10 +327,27 @@ function getProgressClass($progress)
 
 
         /* =====================================================
-           MARK COMPLETE BUTTON
+           ACTION BUTTON
         ===================================================== */
 
-        .btn-complete {
+        .task-actions {
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 10px;
+
+            margin-top: 25px;
+
+            padding-top: 20px;
+
+            border-top: 1px solid #edf1f6;
+
+        }
+
+
+        .task-btn {
 
             display: inline-flex;
 
@@ -323,12 +361,6 @@ function getProgressClass($progress)
 
             border-radius: 9px;
 
-            background: #eaf8ef !important;
-
-            color: #249150 !important;
-
-            border: 1px solid #ccebd7 !important;
-
             font-size: 14px;
 
             font-weight: 600;
@@ -336,67 +368,78 @@ function getProgressClass($progress)
             text-decoration: none;
 
             transition: all 0.2s ease;
+
+        }
+
+
+        /* =====================================================
+           MARK COMPLETE
+        ===================================================== */
+
+        .btn-complete {
+
+            background: #eaf8ef;
+
+            color: #249150;
+
+            border: 1px solid #ccebd7;
 
         }
 
 
         .btn-complete:hover {
 
-            background: #d9f2e2 !important;
+            background: #d9f2e2;
 
-            color: #1d7d43 !important;
-
-            border-color: #b9e3c8 !important;
-
-            transform: translateY(-1px);
+            color: #1d7d43;
 
         }
 
 
         /* =====================================================
-           MARK INCOMPLETE BUTTON
+           MARK INCOMPLETE
         ===================================================== */
 
         .btn-incomplete {
 
-            display: inline-flex;
+            background: #fff4dc;
 
-            align-items: center;
+            color: #c77b00;
 
-            justify-content: center;
-
-            min-height: 40px;
-
-            padding: 0 16px;
-
-            border-radius: 9px;
-
-            background: #fff4dc !important;
-
-            color: #c77b00 !important;
-
-            border: 1px solid #ffd98a !important;
-
-            font-size: 14px;
-
-            font-weight: 600;
-
-            text-decoration: none;
-
-            transition: all 0.2s ease;
+            border: 1px solid #ffd98a;
 
         }
 
 
         .btn-incomplete:hover {
 
-            background: #ffe8b5 !important;
+            background: #ffe8b5;
 
-            color: #a86400 !important;
+            color: #a86400;
 
-            border-color: #ffc95c !important;
+        }
 
-            transform: translateY(-1px);
+
+        /* =====================================================
+           BACK BUTTON
+        ===================================================== */
+
+        .btn-back {
+
+            background: #f1f3f5;
+
+            color: #495057;
+
+            border: 1px solid #dee2e6;
+
+        }
+
+
+        .btn-back:hover {
+
+            background: #e2e6ea;
+
+            color: #343a40;
 
         }
 
@@ -412,6 +455,20 @@ function getProgressClass($progress)
                 grid-template-columns: 1fr;
 
                 gap: 6px;
+
+            }
+
+
+            .task-actions {
+
+                flex-direction: column;
+
+            }
+
+
+            .task-btn {
+
+                width: 100%;
 
             }
 
@@ -434,12 +491,16 @@ function getProgressClass($progress)
     <div class="nav-container">
 
 
+        <!-- LOGO -->
+
         <div class="logo">
 
             ☑ TODO APP
 
         </div>
 
+
+        <!-- USER SECTION -->
 
         <div class="user-section">
 
@@ -450,7 +511,7 @@ function getProgressClass($progress)
                 <?php
 
                 echo htmlspecialchars(
-                    $_SESSION["user_name"]
+                    $_SESSION["user_name"] ?? ""
                 );
 
                 ?>
@@ -476,7 +537,7 @@ function getProgressClass($progress)
 
 
 <!-- =========================================================
-     MAIN CONTENT
+     MAIN
 ========================================================= -->
 
 <main class="container">
@@ -510,7 +571,7 @@ function getProgressClass($progress)
 
             <a
                 href="index.php"
-                class="btn btn-edit"
+                class="task-btn btn-back"
             >
 
                 ← Back
@@ -568,8 +629,8 @@ function getProgressClass($progress)
 
 
         <!-- =================================================
-             TASK DETAILS
-        ================================================= -->
+             TASK ID
+        ================================================== -->
 
         <div class="detail-row">
 
@@ -592,6 +653,10 @@ function getProgressClass($progress)
         </div>
 
 
+
+        <!-- =================================================
+             PRIORITY
+        ================================================== -->
 
         <div class="detail-row">
 
@@ -622,6 +687,10 @@ function getProgressClass($progress)
         </div>
 
 
+
+        <!-- =================================================
+             PROGRESS
+        ================================================== -->
 
         <div class="detail-row">
 
@@ -654,7 +723,7 @@ function getProgressClass($progress)
 
 
         <!-- =================================================
-             COMPLETE STATUS
+             COMPLETE
         ================================================== -->
 
         <div class="detail-row">
@@ -730,7 +799,7 @@ function getProgressClass($progress)
 
 
         <!-- =================================================
-             ADDED DATE
+             ADDED DATE & TIME
         ================================================== -->
 
         <div class="detail-row">
@@ -745,10 +814,18 @@ function getProgressClass($progress)
 
                 <?php
 
-                echo date(
-                    "d M Y, h:i:s A",
-                    strtotime($task["addedDate"])
-                );
+                if (!empty($task["addedDate"])) {
+
+                    echo date(
+                        "d M Y, h:i:s A",
+                        strtotime($task["addedDate"])
+                    );
+
+                } else {
+
+                    echo "Not Available";
+
+                }
 
                 ?>
 
@@ -759,7 +836,7 @@ function getProgressClass($progress)
 
 
         <!-- =================================================
-             EDITED DATE
+             EDITED DATE & TIME
         ================================================== -->
 
         <div class="detail-row">
@@ -774,10 +851,18 @@ function getProgressClass($progress)
 
                 <?php
 
-                echo date(
-                    "d M Y, h:i:s A",
-                    strtotime($task["editedDate"])
-                );
+                if (!empty($task["editedDate"])) {
+
+                    echo date(
+                        "d M Y, h:i:s A",
+                        strtotime($task["editedDate"])
+                    );
+
+                } else {
+
+                    echo "Not Available";
+
+                }
 
                 ?>
 
@@ -788,31 +873,36 @@ function getProgressClass($progress)
 
 
         <!-- =================================================
-             MARK COMPLETE / INCOMPLETE
-             ONLY BUTTON ON VIEW PAGE
+             ONLY COMPLETE / INCOMPLETE BUTTON
         ================================================== -->
 
-        <div class="mt-4">
+        <div class="task-actions">
 
             <?php if ((int)$task["is_completed"] === 1): ?>
 
+                <!-- TASK IS COMPLETE -->
+
                 <a
                     href="toggle_complete.php?id=<?php echo (int)$task["id"]; ?>"
-                    class="btn btn-incomplete"
+                    class="task-btn btn-incomplete"
+                    onclick="return confirm('Mark this task as incomplete?');"
                 >
 
-                    Mark Incomplete
+                    ↩ Mark Incomplete
 
                 </a>
 
             <?php else: ?>
 
+                <!-- TASK IS INCOMPLETE -->
+
                 <a
                     href="toggle_complete.php?id=<?php echo (int)$task["id"]; ?>"
-                    class="btn btn-complete"
+                    class="task-btn btn-complete"
+                    onclick="return confirm('Mark this task as completed?');"
                 >
 
-                    Mark Complete
+                    ✓ Mark Complete
 
                 </a>
 
@@ -829,8 +919,3 @@ function getProgressClass($progress)
 </body>
 
 </html>
-
-
-
-
-

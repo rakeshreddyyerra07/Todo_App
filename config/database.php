@@ -1,10 +1,10 @@
 <?php
 
-$servername = "db.fr-roub1.bengt.wasmernet.com";
-$username   = "user_6c0af212";
-$password   = "pw_LtxQbMJ30UpOdtcFibygjflYPE8wVzuC";
-$dbname     = "db_100af6ff";
-$port       = 20184;
+$servername = "localhost";
+$username   = "root";
+$password   = "";
+$dbname     = "todo_app";
+$port       = 3306;
 
 $conn = mysqli_connect(
     $servername,
@@ -19,4 +19,3 @@ if (!$conn) {
 }
 
 $conn->set_charset("utf8mb4");
-

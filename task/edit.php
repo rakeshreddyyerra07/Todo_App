@@ -1,9 +1,37 @@
 
+
 <?php
 
 session_start();
 
 require_once __DIR__ . "/../config/database.php";
+
+
+/* =========================================================
+   CHECK LOGIN
+========================================================= */
+
+if (!isset($_SESSION["user_id"])) {
+
+    header("Location: ../auth/login.php");
+    exit();
+
+}
+
+
+/* =========================================================
+   ADMIN ACCESS ONLY
+========================================================= */
+
+$user_role = $_SESSION["user_role"] ?? "user";
+
+if ($user_role !== "admin") {
+
+    header("Location: index.php");
+    exit();
+
+}
+
 
 $error = "";
 
@@ -11,6 +39,8 @@ $id = (int)($_GET["id"] ?? 0);
 
 $task = "";
 $status = 1;
+$priority = "Medium";
+$progress = "Todo";
 
 
 /* =========================
@@ -65,7 +95,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $task = trim($_POST["task"] ?? "");
 
     $status = (int)($_POST["status"] ?? 1);
+
     $priority = $_POST["priority"] ?? "Medium";
+
     $progress = $_POST["progress"] ?? "Todo";
 
 
@@ -73,7 +105,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "Please enter a task.";
 
-    } elseif (!in_array($status, [1, 2]) || !in_array($priority, ["Low", "Medium", "High"], true) || !in_array($progress, ["Todo", "In Progress", "Review", "Done"], true)) {
+    } elseif (
+        !in_array($status, [1, 2]) ||
+        !in_array(
+            $priority,
+            ["Low", "Medium", "High"],
+            true
+        ) ||
+        !in_array(
+            $progress,
+            ["Todo", "In Progress", "Review", "Done"],
+            true
+        )
+    ) {
 
         $error = "Invalid status.";
 
@@ -91,11 +135,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($stmt) {
 
-            $stmt->bind_param("sissi", $task, $status, $priority, $progress, $id);
+            $stmt->bind_param(
+                "sissi",
+                $task,
+                $status,
+                $priority,
+                $progress,
+                $id
+            );
 
             if ($stmt->execute()) {
 
-                $_SESSION["success"] = "Task updated successfully.";
+                $_SESSION["success"] =
+                    "Task updated successfully.";
 
                 header("Location: index.php");
                 exit;
@@ -185,22 +237,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Priority</label>
-                            <select name="priority" class="form-select">
-                                <?php foreach (["Low", "Medium", "High"] as $item): ?>
-                                    <option value="<?= $item ?>" <?= $priority === $item ? "selected" : "" ?>><?= $item ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Task Progress</label>
-                            <select name="progress" class="form-select">
-                                <?php foreach (["Todo", "In Progress", "Review", "Done"] as $item): ?>
-                                    <option value="<?= $item ?>" <?= $progress === $item ? "selected" : "" ?>><?= $item ?></option>
+
+                            <label class="form-label">
+                                Priority
+                            </label>
+
+                            <select
+                                name="priority"
+                                class="form-select"
+                            >
+
+                                <?php foreach (
+                                    ["Low", "Medium", "High"]
+                                    as $item
+                                ): ?>
+
+                                    <option
+                                        value="<?= htmlspecialchars($item) ?>"
+                                        <?= $priority === $item ? "selected" : "" ?>
+                                    >
+                                        <?= htmlspecialchars($item) ?>
+                                    </option>
+
                                 <?php endforeach; ?>
+
                             </select>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label">
+                                Task Progress
+                            </label>
+
+                            <select
+                                name="progress"
+                                class="form-select"
+                            >
+
+                                <?php foreach (
+                                    [
+                                        "Todo",
+                                        "In Progress",
+                                        "Review",
+                                        "Done"
+                                    ]
+                                    as $item
+                                ): ?>
+
+                                    <option
+                                        value="<?= htmlspecialchars($item) ?>"
+                                        <?= $progress === $item ? "selected" : "" ?>
+                                    >
+                                        <?= htmlspecialchars($item) ?>
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
+
                         </div>
 
 
@@ -267,3 +366,5 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </body>
 
 </html>
+
+

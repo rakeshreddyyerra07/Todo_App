@@ -5,6 +5,33 @@ session_start();
 
 require_once __DIR__ . "/../config/database.php";
 
+
+/* =========================================================
+   CHECK LOGIN
+========================================================= */
+
+if (!isset($_SESSION["user_id"])) {
+
+    header("Location: ../auth/login.php");
+    exit();
+
+}
+
+
+/* =========================================================
+   ADMIN ACCESS ONLY
+========================================================= */
+
+$user_role = $_SESSION["user_role"] ?? "user";
+
+if ($user_role !== "admin") {
+
+    header("Location: index.php");
+    exit();
+
+}
+
+
 $error = "";
 
 $task = "";
@@ -13,66 +40,149 @@ $status = 1;
 $priority = "Medium";
 $progress = "Todo";
 
+
+/* =========================================================
+   ADD TASK
+========================================================= */
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $task = trim($_POST["task"] ?? "");
+
     $description = trim($_POST["description"] ?? "");
+
     $status = (int)($_POST["status"] ?? 1);
+
     $priority = $_POST["priority"] ?? "Medium";
+
     $progress = $_POST["progress"] ?? "Todo";
+
+
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
 
     if (empty($task)) {
 
         $error = "Please enter a task.";
 
-    } elseif (!in_array($status, [1, 2]) || !in_array($priority, ["Low", "Medium", "High"], true) || !in_array($progress, ["Todo", "In Progress", "Review", "Done"], true)) {
+    }
+
+    elseif (
+        !in_array($status, [1, 2]) ||
+        !in_array(
+            $priority,
+            ["Low", "Medium", "High"],
+            true
+        ) ||
+        !in_array(
+            $progress,
+            ["Todo", "In Progress", "Review", "Done"],
+            true
+        )
+    ) {
 
         $error = "Invalid status.";
 
-    } else {
+    }
 
-        $sql = "INSERT INTO tasks (task, description, status, priority, progress, addedDate, editedDate)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+    else {
+
+
+        /* =================================================
+           INSERT TASK
+        ================================================= */
+
+        $sql = "
+            INSERT INTO tasks
+            (
+                task,
+                description,
+                status,
+                priority,
+                progress,
+                addedDate,
+                editedDate
+            )
+            VALUES
+            (
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+        ";
+
 
         $stmt = $conn->prepare($sql);
 
+
         if ($stmt) {
 
-            $stmt->bind_param("ssiss", $task, $description, $status, $priority, $progress);
+            $stmt->bind_param(
+                "ssiss",
+                $task,
+                $description,
+                $status,
+                $priority,
+                $progress
+            );
+
 
             if ($stmt->execute()) {
 
-                $_SESSION["success"] = "Task added successfully.";
+                $_SESSION["success"] =
+                    "Task added successfully.";
+
 
                 header("Location: index.php");
+
                 exit;
 
-            } else {
+            }
+
+            else {
 
                 $error = "Failed to add task.";
+
             }
+
 
             $stmt->close();
 
-        } else {
+        }
+
+        else {
 
             $error = "Database error.";
+
         }
+
     }
+
 }
 
 ?>
 
+
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Add Task</title>
+
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -81,7 +191,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </head>
 
+
 <body class="bg-light">
+
 
 <div class="container mt-5">
 
@@ -91,13 +203,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="card shadow">
 
+
+                <!-- =================================================
+                     HEADER
+                ================================================== -->
+
                 <div class="card-header bg-primary text-white">
 
-                    <h4 class="mb-0">Add Task</h4>
+                    <h4 class="mb-0">
+                        Add Task
+                    </h4>
 
                 </div>
 
+
+                <!-- =================================================
+                     BODY
+                ================================================== -->
+
                 <div class="card-body">
+
 
                     <?php if (!empty($error)): ?>
 
@@ -110,13 +235,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <?php endif; ?>
 
 
+                    <!-- =================================================
+                         FORM
+                    ================================================== -->
+
                     <form method="POST">
+
+
+                        <!-- TASK -->
 
                         <div class="mb-3">
 
                             <label class="form-label">
                                 Task
                             </label>
+
 
                             <input
                                 type="text"
@@ -130,11 +263,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
 
 
+                        <!-- DESCRIPTION -->
+
                         <div class="mb-3">
 
                             <label class="form-label">
                                 Task Description
                             </label>
+
 
                             <textarea
                                 name="description"
@@ -146,21 +282,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
 
 
+                        <!-- PRIORITY -->
+
                         <div class="mb-3">
 
                             <label class="form-label">
                                 Priority
                             </label>
 
-                            <select name="priority" class="form-select">
 
-                                <?php foreach (["Low", "Medium", "High"] as $item): ?>
+                            <select
+                                name="priority"
+                                class="form-select"
+                            >
+
+                                <?php foreach (
+                                    ["Low", "Medium", "High"]
+                                    as $item
+                                ): ?>
 
                                     <option
-                                        value="<?= $item ?>"
+                                        value="<?= htmlspecialchars($item) ?>"
                                         <?= $priority === $item ? "selected" : "" ?>
                                     >
-                                        <?= $item ?>
+
+                                        <?= htmlspecialchars($item) ?>
+
                                     </option>
 
                                 <?php endforeach; ?>
@@ -169,6 +316,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         </div>
 
+
+                        <!-- PROGRESS -->
 
                         <div class="mb-3">
 
@@ -176,15 +325,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 Task Progress
                             </label>
 
-                            <select name="progress" class="form-select">
 
-                                <?php foreach (["Todo", "In Progress", "Review", "Done"] as $item): ?>
+                            <select
+                                name="progress"
+                                class="form-select"
+                            >
+
+                                <?php foreach (
+                                    [
+                                        "Todo",
+                                        "In Progress",
+                                        "Review",
+                                        "Done"
+                                    ]
+                                    as $item
+                                ): ?>
 
                                     <option
-                                        value="<?= $item ?>"
+                                        value="<?= htmlspecialchars($item) ?>"
                                         <?= $progress === $item ? "selected" : "" ?>
                                     >
-                                        <?= $item ?>
+
+                                        <?= htmlspecialchars($item) ?>
+
                                     </option>
 
                                 <?php endforeach; ?>
@@ -194,13 +357,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
 
 
+                        <!-- STATUS -->
+
                         <div class="mb-3">
 
                             <label class="form-label">
                                 Status
                             </label>
 
-                            <select name="status" class="form-select">
+
+                            <select
+                                name="status"
+                                class="form-select"
+                            >
 
                                 <option
                                     value="1"
@@ -208,6 +377,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 >
                                     Active
                                 </option>
+
 
                                 <option
                                     value="2"
@@ -221,25 +391,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
 
 
+                        <!-- BUTTONS -->
+
                         <div class="d-flex gap-2">
 
                             <button
                                 type="submit"
                                 class="btn btn-primary"
                             >
+
                                 Add Task
+
                             </button>
+
 
                             <a
                                 href="index.php"
                                 class="btn btn-secondary"
                             >
+
                                 Cancel
+
                             </a>
 
                         </div>
 
+
                     </form>
+
 
                 </div>
 
@@ -251,8 +430,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </div>
 
+
 </body>
 
 </html>
-
 
