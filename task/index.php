@@ -492,9 +492,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
        PAGE
     ===================================================== */
 
+    * {
+        box-sizing: border-box;
+    }
+
+
     body {
 
         background: #f5f7fb;
+
+        margin: 0;
+
+        min-height: 100vh;
 
     }
 
@@ -514,11 +523,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .nav-container {
 
+        width: 100%;
+
         max-width: 1200px;
 
         margin: 0 auto;
 
         padding: 0 24px;
+
+        min-height: 58px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        gap: 15px;
 
     }
 
@@ -531,6 +552,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         color: #13213c;
 
+        white-space: nowrap;
+
+    }
+
+
+    .user-section {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 12px;
+
+        font-size: 12px;
+
+        color: #526071;
+
     }
 
 
@@ -539,6 +577,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ===================================================== */
 
     .task-board-page {
+
+        width: 100%;
 
         max-width: 1200px;
 
@@ -571,6 +611,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .board-title-area {
 
         flex: 1;
+
+        min-width: 0;
 
     }
 
@@ -661,6 +703,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         color: #8b96a8;
 
+        pointer-events: none;
+
     }
 
 
@@ -685,6 +729,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         background: #ffffff;
 
         color: #26334d;
+
+        outline: none;
 
     }
 
@@ -748,6 +794,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         width: 100%;
 
+        align-items: start;
+
     }
 
 
@@ -765,7 +813,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         padding: 10px;
 
-        transition: 0.2s ease;
+        transition:
+            box-shadow 0.2s ease,
+            border-color 0.2s ease,
+            transform 0.2s ease;
 
     }
 
@@ -800,8 +851,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .board-column.drag-over {
 
+        border-color: #287be8;
+
         box-shadow:
-            inset 0 0 0 2px #287be8;
+            inset 0 0 0 2px #287be8,
+            0 8px 20px rgba(
+                40,
+                123,
+                232,
+                0.10
+            );
 
     }
 
@@ -885,6 +944,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         min-height: 365px;
 
+        position: relative;
+
+        padding-bottom: 10px;
+
+    }
+
+
+    /* =====================================================
+       DROP INDICATOR
+    ===================================================== */
+
+    .drop-indicator {
+
+        height: 4px;
+
+        margin: 5px 2px;
+
+        border-radius: 4px;
+
+        background: #287be8;
+
+        box-shadow:
+            0 0 0 2px rgba(
+                40,
+                123,
+                232,
+                0.12
+            );
+
+        pointer-events: none;
+
+        transition: 0.1s ease;
+
     }
 
 
@@ -908,6 +1000,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         cursor: grab;
 
+        user-select: none;
+
+        -webkit-user-select: none;
+
+        touch-action: pan-y;
+
         box-shadow:
             0 1px 2px rgba(
                 20,
@@ -918,7 +1016,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         transition:
             transform 0.15s ease,
-            box-shadow 0.15s ease;
+            box-shadow 0.15s ease,
+            opacity 0.15s ease;
 
     }
 
@@ -941,6 +1040,67 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .task-card:active {
 
         cursor: grabbing;
+
+    }
+
+
+    /* =====================================================
+       DRAGGING CARD
+    ===================================================== */
+
+    .task-card.dragging {
+
+        opacity: 0.35;
+
+        transform:
+            rotate(1deg)
+            scale(0.98);
+
+        box-shadow:
+            0 12px 30px rgba(
+                20,
+                30,
+                50,
+                0.18
+            );
+
+    }
+
+
+    /* =====================================================
+       TOUCH DRAGGING
+    ===================================================== */
+
+    .task-card.touch-dragging {
+
+        position: fixed;
+
+        z-index: 9999;
+
+        width: var(--drag-width);
+
+        pointer-events: none;
+
+        opacity: 0.94;
+
+        transform:
+            rotate(2deg)
+            scale(1.03);
+
+        box-shadow:
+            0 15px 35px rgba(
+                20,
+                30,
+                50,
+                0.25
+            );
+
+    }
+
+
+    .task-card.touch-source {
+
+        opacity: 0.25;
 
     }
 
@@ -1200,6 +1360,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         cursor: pointer;
 
+        touch-action: manipulation;
+
     }
 
 
@@ -1285,7 +1447,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .empty-column {
 
-        height: 60px;
+        min-height: 60px;
 
         display: flex;
 
@@ -1297,11 +1459,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         font-size: 10px;
 
+        border: 1px dashed #cfd6e0;
+
+        border-radius: 6px;
+
+        margin-top: 4px;
+
     }
 
 
     /* =====================================================
-       RESPONSIVE
+       DRAG HINT
+    ===================================================== */
+
+    .drag-hint {
+
+        position: fixed;
+
+        left: 50%;
+
+        bottom: 18px;
+
+        transform:
+            translateX(-50%)
+            translateY(20px);
+
+        background: #17233d;
+
+        color: #ffffff;
+
+        padding: 8px 14px;
+
+        border-radius: 20px;
+
+        font-size: 11px;
+
+        font-weight: 600;
+
+        opacity: 0;
+
+        pointer-events: none;
+
+        z-index: 10000;
+
+        transition:
+            opacity 0.2s ease,
+            transform 0.2s ease;
+
+    }
+
+
+    .drag-hint.show {
+
+        opacity: 1;
+
+        transform:
+            translateX(-50%)
+            translateY(0);
+
+    }
+
+
+    /* =====================================================
+       RESPONSIVE - TABLET
     ===================================================== */
 
     @media (max-width: 950px) {
@@ -1329,15 +1549,87 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         }
 
+
+        .board-search {
+
+            flex: 1;
+
+            min-width: 200px;
+
+        }
+
+
+        .board-search input {
+
+            width: 100%;
+
+        }
+
     }
 
 
+    /* =====================================================
+       RESPONSIVE - MOBILE
+    ===================================================== */
+
     @media (max-width: 600px) {
+
+        .nav-container {
+
+            padding: 0 12px;
+
+            min-height: 54px;
+
+        }
+
+
+        .logo {
+
+            font-size: 17px;
+
+        }
+
+
+        .user-section {
+
+            gap: 6px;
+
+            font-size: 10px;
+
+        }
+
+
+        .user-section span {
+
+            max-width: 110px;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+
+            white-space: nowrap;
+
+        }
+
 
         .task-board-page {
 
             padding:
                 15px 10px;
+
+        }
+
+
+        .board-title {
+
+            font-size: 17px;
+
+        }
+
+
+        .board-subtitle {
+
+            font-size: 10px;
 
         }
 
@@ -1350,7 +1642,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             gap: 12px;
 
-            padding-bottom: 10px;
+            padding-bottom: 14px;
+
+            scroll-snap-type: x proximity;
+
+            -webkit-overflow-scrolling: touch;
 
         }
 
@@ -1359,7 +1655,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             min-width: 285px;
 
+            width: 285px;
+
             flex: 0 0 285px;
+
+            min-height: 430px;
+
+            scroll-snap-align: start;
 
         }
 
@@ -1369,7 +1671,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             display: grid;
 
             grid-template-columns:
-                1fr 1fr;
+                minmax(0, 1fr)
+                minmax(0, 1fr);
+
+            gap: 8px;
+
+            width: 100%;
 
         }
 
@@ -1379,12 +1686,90 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             grid-column:
                 1 / -1;
 
+            width: 100%;
+
         }
 
 
         .board-search input {
 
             width: 100%;
+
+        }
+
+
+        .board-filter {
+
+            width: 100%;
+
+        }
+
+
+        .add-task-btn {
+
+            width: 100%;
+
+            padding: 0 10px;
+
+        }
+
+
+        .task-card {
+
+            padding: 12px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .task-name {
+
+            font-size: 11px;
+
+        }
+
+
+        .task-description {
+
+            font-size: 10px;
+
+        }
+
+
+        .drag-hint {
+
+            bottom: 12px;
+
+            font-size: 10px;
+
+            padding: 7px 12px;
+
+        }
+
+    }
+
+
+    /* =====================================================
+       VERY SMALL MOBILE
+    ===================================================== */
+
+    @media (max-width: 380px) {
+
+        .board-column {
+
+            min-width: 270px;
+
+            width: 270px;
+
+            flex-basis: 270px;
+
+        }
+
+
+        .user-section span {
+
+            display: none;
 
         }
 
@@ -1443,6 +1828,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
 </nav>
+
 
 <!-- =========================================================
      TASK BOARD ONLY
@@ -1672,8 +2058,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     >
 
 
-                        <!-- TASK -->
-
                         <div class="task-name">
 
                             <?php
@@ -1687,8 +2071,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
 
 
-                        <!-- DESCRIPTION -->
-
                         <div class="task-description">
 
                             <?php
@@ -1701,8 +2083,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         </div>
 
-
-                        <!-- BADGES -->
 
                         <div class="card-badges">
 
@@ -1759,8 +2139,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </div>
 
 
-                        <!-- DATE -->
-
                         <div class="task-date">
 
                             <span class="task-date-icon">
@@ -1780,8 +2158,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         </div>
 
-
-                        <!-- MENU -->
 
                         <div class="task-menu">
 
@@ -1927,6 +2303,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                         <div class="card-badges">
+
 
                             <span
                                 class="task-badge <?php echo getPriorityClass($row["priority"]); ?>"
@@ -2145,6 +2522,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         <div class="card-badges">
 
+
                             <span
                                 class="task-badge <?php echo getPriorityClass($row["priority"]); ?>"
                             >
@@ -2362,6 +2740,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         <div class="card-badges">
 
+
                             <span
                                 class="task-badge <?php echo getPriorityClass($row["priority"]); ?>"
                             >
@@ -2511,6 +2890,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </main>
 
+
+<!-- =========================================================
+     DRAG HINT
+========================================================= -->
+
+<div
+    id="dragHint"
+    class="drag-hint"
+>
+
+    Drop task to change status
+
+</div>
+
+
 <script>
 
 /* =========================================================
@@ -2633,10 +3027,426 @@ document.addEventListener(
 
 /* =========================================================
    DRAG AND DROP
+   DESKTOP + MOBILE TOUCH
 ========================================================= */
 
 let draggedTaskId = null;
 
+let draggedCard = null;
+
+let dropIndicator = null;
+
+let touchClone = null;
+
+let touchStartX = 0;
+
+let touchStartY = 0;
+
+let touchCurrentX = 0;
+
+let touchCurrentY = 0;
+
+let touchDragging = false;
+
+let touchSourceCard = null;
+
+let currentDropColumn = null;
+
+let currentDropBefore = null;
+
+
+/* =========================================================
+   DRAG HINT
+========================================================= */
+
+const dragHint =
+    document.getElementById(
+        "dragHint"
+    );
+
+
+function showDragHint()
+{
+
+    if (!dragHint) {
+
+        return;
+
+    }
+
+
+    dragHint.classList.add(
+        "show"
+    );
+
+}
+
+
+function hideDragHint()
+{
+
+    if (!dragHint) {
+
+        return;
+
+    }
+
+
+    dragHint.classList.remove(
+        "show"
+    );
+
+}
+
+
+/* =========================================================
+   CREATE DROP INDICATOR
+========================================================= */
+
+function createDropIndicator()
+{
+
+    if (!dropIndicator) {
+
+        dropIndicator =
+            document.createElement(
+                "div"
+            );
+
+
+        dropIndicator.className =
+            "drop-indicator";
+
+    }
+
+
+    return dropIndicator;
+
+}
+
+
+/* =========================================================
+   REMOVE DROP INDICATOR
+========================================================= */
+
+function removeDropIndicator()
+{
+
+    if (
+        dropIndicator &&
+        dropIndicator.parentNode
+    ) {
+
+        dropIndicator.parentNode.removeChild(
+            dropIndicator
+        );
+
+    }
+
+
+    currentDropColumn =
+        null;
+
+
+    currentDropBefore =
+        null;
+
+}
+
+
+/* =========================================================
+   GET TASK BEFORE POSITION
+========================================================= */
+
+function getTaskBefore(
+    taskList,
+    mouseY
+)
+{
+
+    const cards =
+        [
+            ...taskList.querySelectorAll(
+                ".task-card:not(.dragging):not(.touch-source)"
+            )
+        ];
+
+
+    let closest = {
+
+        offset:
+            Number.NEGATIVE_INFINITY,
+
+        element:
+            null
+
+    };
+
+
+    cards.forEach(
+        function(card)
+        {
+
+            const box =
+                card.getBoundingClientRect();
+
+
+            const offset =
+                mouseY
+                -
+                (
+                    box.top
+                    +
+                    box.height / 2
+                );
+
+
+            if (
+                offset < 0 &&
+                offset > closest.offset
+            ) {
+
+                closest = {
+
+                    offset:
+                        offset,
+
+                    element:
+                        card
+
+                };
+
+            }
+
+        }
+    );
+
+
+    return closest.element;
+
+}
+
+
+/* =========================================================
+   SHOW DROP POSITION
+========================================================= */
+
+function showDropPosition(
+    column,
+    mouseY
+)
+{
+
+    if (!column) {
+
+        return;
+
+    }
+
+
+    const taskList =
+        column.querySelector(
+            ".task-list"
+        );
+
+
+    if (!taskList) {
+
+        return;
+
+    }
+
+
+    const indicator =
+        createDropIndicator();
+
+
+    const before =
+        getTaskBefore(
+            taskList,
+            mouseY
+        );
+
+
+    if (before) {
+
+        taskList.insertBefore(
+            indicator,
+            before
+        );
+
+    }
+
+    else {
+
+        taskList.appendChild(
+            indicator
+        );
+
+    }
+
+
+    currentDropColumn =
+        column;
+
+
+    currentDropBefore =
+        before;
+
+
+    column.classList.add(
+        "drag-over"
+    );
+
+}
+
+
+/* =========================================================
+   CLEAR COLUMN HIGHLIGHTS
+========================================================= */
+
+function clearColumnHighlights()
+{
+
+    document
+        .querySelectorAll(
+            ".board-column.drag-over"
+        )
+        .forEach(
+            function(column)
+            {
+
+                column.classList.remove(
+                    "drag-over"
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   FIND COLUMN FROM POINT
+========================================================= */
+
+function getColumnFromPoint(
+    x,
+    y
+)
+{
+
+    const element =
+        document.elementFromPoint(
+            x,
+            y
+        );
+
+
+    if (!element) {
+
+        return null;
+
+    }
+
+
+    return element.closest(
+        ".board-column"
+    );
+
+}
+
+
+/* =========================================================
+   SAVE TASK PROGRESS
+========================================================= */
+
+function saveTaskProgress(
+    taskId,
+    progress
+)
+{
+
+    if (!taskId || !progress) {
+
+        return;
+
+    }
+
+
+    const form =
+        document.createElement(
+            "form"
+        );
+
+
+    form.method =
+        "POST";
+
+
+    form.action =
+        "index.php";
+
+
+    const taskInput =
+        document.createElement(
+            "input"
+        );
+
+
+    taskInput.type =
+        "hidden";
+
+
+    taskInput.name =
+        "task_id";
+
+
+    taskInput.value =
+        taskId;
+
+
+    const progressInput =
+        document.createElement(
+            "input"
+        );
+
+
+    progressInput.type =
+        "hidden";
+
+
+    progressInput.name =
+        "progress";
+
+
+    progressInput.value =
+        progress;
+
+
+    form.appendChild(
+        taskInput
+    );
+
+
+    form.appendChild(
+        progressInput
+    );
+
+
+    document.body.appendChild(
+        form
+    );
+
+
+    form.submit();
+
+}
+
+
+/* =========================================================
+   DESKTOP DRAG START
+========================================================= */
 
 document
     .querySelectorAll(
@@ -2648,15 +3458,39 @@ document
 
             card.addEventListener(
                 "dragstart",
-                function()
+                function(event)
                 {
 
                     draggedTaskId =
                         this.dataset.taskId;
 
 
-                    this.style.opacity =
-                        "0.5";
+                    draggedCard =
+                        this;
+
+
+                    this.classList.add(
+                        "dragging"
+                    );
+
+
+                    showDragHint();
+
+
+                    if (
+                        event.dataTransfer
+                    ) {
+
+                        event.dataTransfer.effectAllowed =
+                            "move";
+
+
+                        event.dataTransfer.setData(
+                            "text/plain",
+                            draggedTaskId
+                        );
+
+                    }
 
                 }
             );
@@ -2667,12 +3501,24 @@ document
                 function()
                 {
 
-                    this.style.opacity =
-                        "1";
+                    this.classList.remove(
+                        "dragging"
+                    );
 
 
                     draggedTaskId =
                         null;
+
+
+                    draggedCard =
+                        null;
+
+
+                    removeDropIndicator();
+
+                    clearColumnHighlights();
+
+                    hideDragHint();
 
                 }
             );
@@ -2680,6 +3526,10 @@ document
         }
     );
 
+
+/* =========================================================
+   DESKTOP COLUMN DRAG OVER
+========================================================= */
 
 document
     .querySelectorAll(
@@ -2697,8 +3547,29 @@ document
                     event.preventDefault();
 
 
-                    this.classList.add(
-                        "drag-over"
+                    if (!draggedTaskId) {
+
+                        return;
+
+                    }
+
+
+                    if (
+                        event.dataTransfer
+                    ) {
+
+                        event.dataTransfer.dropEffect =
+                            "move";
+
+                    }
+
+
+                    clearColumnHighlights();
+
+
+                    showDropPosition(
+                        this,
+                        event.clientY
                     );
 
                 }
@@ -2707,12 +3578,31 @@ document
 
             column.addEventListener(
                 "dragleave",
-                function()
+                function(event)
                 {
 
-                    this.classList.remove(
-                        "drag-over"
-                    );
+                    const rect =
+                        this.getBoundingClientRect();
+
+
+                    const outside =
+                        event.clientX <
+                            rect.left ||
+                        event.clientX >
+                            rect.right ||
+                        event.clientY <
+                            rect.top ||
+                        event.clientY >
+                            rect.bottom;
+
+
+                    if (outside) {
+
+                        this.classList.remove(
+                            "drag-over"
+                        );
+
+                    }
 
                 }
             );
@@ -2726,11 +3616,6 @@ document
                     event.preventDefault();
 
 
-                    this.classList.remove(
-                        "drag-over"
-                    );
-
-
                     if (!draggedTaskId) {
 
                         return;
@@ -2738,82 +3623,594 @@ document
                     }
 
 
+                    const taskId =
+                        draggedTaskId;
+
+
                     const newProgress =
                         this.dataset.progress;
 
 
-                    const form =
-                        document.createElement(
-                            "form"
-                        );
+                    removeDropIndicator();
+
+                    clearColumnHighlights();
+
+                    hideDragHint();
 
 
-                    form.method =
-                        "POST";
-
-
-                    form.action =
-                        "index.php";
-
-
-                    const taskInput =
-                        document.createElement(
-                            "input"
-                        );
-
-
-                    taskInput.type =
-                        "hidden";
-
-
-                    taskInput.name =
-                        "task_id";
-
-
-                    taskInput.value =
-                        draggedTaskId;
-
-
-                    const progressInput =
-                        document.createElement(
-                            "input"
-                        );
-
-
-                    progressInput.type =
-                        "hidden";
-
-
-                    progressInput.name =
-                        "progress";
-
-
-                    progressInput.value =
-                        newProgress;
-
-
-                    form.appendChild(
-                        taskInput
+                    saveTaskProgress(
+                        taskId,
+                        newProgress
                     );
-
-
-                    form.appendChild(
-                        progressInput
-                    );
-
-
-                    document.body.appendChild(
-                        form
-                    );
-
-
-                    form.submit();
 
                 }
             );
 
         }
     );
+
+
+/* =========================================================
+   TOUCH DRAG HELPERS
+========================================================= */
+
+function startTouchDrag(
+    card,
+    event
+)
+{
+
+    if (
+        event.touches.length !== 1
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        event.target.closest(
+            ".task-menu"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const touch =
+        event.touches[0];
+
+
+    touchStartX =
+        touch.clientX;
+
+
+    touchStartY =
+        touch.clientY;
+
+
+    touchCurrentX =
+        touch.clientX;
+
+
+    touchCurrentY =
+        touch.clientY;
+
+
+    touchSourceCard =
+        card;
+
+
+    touchDragging =
+        false;
+
+}
+
+
+/* =========================================================
+   BEGIN TOUCH DRAG
+========================================================= */
+
+function beginTouchDrag()
+{
+
+    if (
+        !touchSourceCard ||
+        touchDragging
+    ) {
+
+        return;
+
+    }
+
+
+    touchDragging =
+        true;
+
+
+    draggedTaskId =
+        touchSourceCard.dataset.taskId;
+
+
+    const rect =
+        touchSourceCard.getBoundingClientRect();
+
+
+    touchClone =
+        touchSourceCard.cloneNode(
+            true
+        );
+
+
+    touchClone.classList.add(
+        "touch-dragging"
+    );
+
+
+    touchClone.classList.remove(
+        "touch-source"
+    );
+
+
+    touchClone.style.setProperty(
+        "--drag-width",
+        rect.width + "px"
+    );
+
+
+    touchClone.style.left =
+        rect.left + "px";
+
+
+    touchClone.style.top =
+        rect.top + "px";
+
+
+    touchClone.style.height =
+        rect.height + "px";
+
+
+    document.body.appendChild(
+        touchClone
+    );
+
+
+    touchSourceCard.classList.add(
+        "touch-source"
+    );
+
+
+    showDragHint();
+
+}
+
+
+/* =========================================================
+   MOVE TOUCH CLONE
+========================================================= */
+
+function moveTouchClone(
+    x,
+    y
+)
+{
+
+    if (!touchClone) {
+
+        return;
+
+    }
+
+
+    const rect =
+        touchClone.getBoundingClientRect();
+
+
+    const left =
+        x
+        -
+        (
+            rect.width / 2
+        );
+
+
+    const top =
+        y
+        -
+        25;
+
+
+    touchClone.style.left =
+        left + "px";
+
+
+    touchClone.style.top =
+        top + "px";
+
+}
+
+
+/* =========================================================
+   TOUCH MOVE
+========================================================= */
+
+document
+    .querySelectorAll(
+        ".task-card"
+    )
+    .forEach(
+        function(card)
+        {
+
+            card.addEventListener(
+                "touchstart",
+                function(event)
+                {
+
+                    startTouchDrag(
+                        this,
+                        event
+                    );
+
+                },
+                {
+                    passive: true
+                }
+            );
+
+
+            card.addEventListener(
+                "touchmove",
+                function(event)
+                {
+
+                    if (
+                        !touchSourceCard ||
+                        touchSourceCard !== this
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    if (
+                        event.touches.length !== 1
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    const touch =
+                        event.touches[0];
+
+
+                    touchCurrentX =
+                        touch.clientX;
+
+
+                    touchCurrentY =
+                        touch.clientY;
+
+
+                    const distanceX =
+                        Math.abs(
+                            touchCurrentX
+                            -
+                            touchStartX
+                        );
+
+
+                    const distanceY =
+                        Math.abs(
+                            touchCurrentY
+                            -
+                            touchStartY
+                        );
+
+
+                    if (
+                        !touchDragging &&
+                        (
+                            distanceX > 8 ||
+                            distanceY > 8
+                        )
+                    ) {
+
+                        beginTouchDrag();
+
+                    }
+
+
+                    if (!touchDragging) {
+
+                        return;
+
+                    }
+
+
+                    event.preventDefault();
+
+
+                    moveTouchClone(
+                        touchCurrentX,
+                        touchCurrentY
+                    );
+
+
+                    const column =
+                        getColumnFromPoint(
+                            touchCurrentX,
+                            touchCurrentY
+                        );
+
+
+                    clearColumnHighlights();
+
+
+                    if (column) {
+
+                        showDropPosition(
+                            column,
+                            touchCurrentY
+                        );
+
+                    }
+
+                },
+                {
+                    passive: false
+                }
+            );
+
+
+            card.addEventListener(
+                "touchend",
+                function(event)
+                {
+
+                    if (
+                        !touchSourceCard ||
+                        touchSourceCard !== this
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    if (!touchDragging) {
+
+                        touchSourceCard =
+                            null;
+
+                        return;
+
+                    }
+
+
+                    const column =
+                        getColumnFromPoint(
+                            touchCurrentX,
+                            touchCurrentY
+                        );
+
+
+                    let taskId =
+                        draggedTaskId;
+
+
+                    let newProgress =
+                        column
+                        ? column.dataset.progress
+                        : "";
+
+
+                    if (
+                        taskId &&
+                        newProgress
+                    ) {
+
+                        saveTaskProgress(
+                            taskId,
+                            newProgress
+                        );
+
+                    }
+
+
+                    finishTouchDrag();
+
+                }
+            );
+
+
+            card.addEventListener(
+                "touchcancel",
+                function()
+                {
+
+                    finishTouchDrag();
+
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   FINISH TOUCH DRAG
+========================================================= */
+
+function finishTouchDrag()
+{
+
+    if (touchClone) {
+
+        touchClone.remove();
+
+    }
+
+
+    touchClone =
+        null;
+
+
+    if (touchSourceCard) {
+
+        touchSourceCard.classList.remove(
+            "touch-source"
+        );
+
+    }
+
+
+    touchSourceCard =
+        null;
+
+
+    touchDragging =
+        false;
+
+
+    draggedTaskId =
+        null;
+
+
+    removeDropIndicator();
+
+    clearColumnHighlights();
+
+    hideDragHint();
+
+}
+
+
+/* =========================================================
+   PREVENT MENU FROM STARTING DRAG
+========================================================= */
+
+document
+    .querySelectorAll(
+        ".task-menu"
+    )
+    .forEach(
+        function(menu)
+        {
+
+            menu.addEventListener(
+                "mousedown",
+                function(event)
+                {
+
+                    event.stopPropagation();
+
+                }
+            );
+
+
+            menu.addEventListener(
+                "touchstart",
+                function(event)
+                {
+
+                    event.stopPropagation();
+
+                },
+                {
+                    passive: true
+                }
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   MOBILE HORIZONTAL SCROLL
+========================================================= */
+
+const board =
+    document.querySelector(
+        ".board"
+    );
+
+
+let boardTouchStartX = 0;
+
+let boardTouchStartY = 0;
+
+
+if (board) {
+
+    board.addEventListener(
+        "touchstart",
+        function(event)
+        {
+
+            if (
+                touchDragging ||
+                event.target.closest(
+                    ".task-card"
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                event.touches.length !== 1
+            ) {
+
+                return;
+
+            }
+
+
+            boardTouchStartX =
+                event.touches[0].clientX;
+
+
+            boardTouchStartY =
+                event.touches[0].clientY;
+
+        },
+        {
+            passive: true
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ESCAPE TO CANCEL DRAG
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(event)
+    {
+
+        if (
+            event.key === "Escape" &&
+            touchDragging
+        ) {
+
+            finishTouchDrag();
+
+        }
+
+    }
+);
 
 </script>
 
