@@ -1,3 +1,4 @@
+
 <?php
 
 session_start();
@@ -22,117 +23,184 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else {
 
+        /*
+        |--------------------------------------------------------------------------
+        | FIND USER
+        |--------------------------------------------------------------------------
+        */
+
         $stmt = mysqli_prepare(
             $conn,
-            "SELECT id FROM users WHERE email = ? LIMIT 1"
+            "SELECT id, name, email
+             FROM users
+             WHERE email = ?
+             LIMIT 1"
         );
 
         if ($stmt === false) {
 
-            $error = "Database error: " . mysqli_error($conn);
+            $error =
+                "Database error: " .
+                mysqli_error($conn);
 
         } else {
 
-            mysqli_stmt_bind_param($stmt, "s", $email);
-            mysqli_stmt_execute($stmt);
+            mysqli_stmt_bind_param(
+                $stmt,
+                "s",
+                $email
+            );
 
-            $result = mysqli_stmt_get_result($stmt);
+            if (!mysqli_stmt_execute($stmt)) {
 
-            if ($result && mysqli_num_rows($result) === 1) {
+                $error =
+                    "Database error: " .
+                    mysqli_stmt_error($stmt);
 
-                $user = mysqli_fetch_assoc($result);
-                $user_id = (int)$user["id"];
-
-                /* Generate token */
-
-                $token = bin2hex(random_bytes(32));
-
-                /*
-                 * Use MySQL time.
-                 * Token will expire after 1 hour.
-                 */
-
-                $delete = mysqli_prepare(
-                    $conn,
-                    "DELETE FROM password_resets WHERE user_id = ?"
-                );
-
-                if ($delete === false) {
-
-                    $error =
-                        "Unable to delete old reset request: "
-                        . mysqli_error($conn);
-
-                } else {
-
-                    mysqli_stmt_bind_param(
-                        $delete,
-                        "i",
-                        $user_id
-                    );
-
-                    mysqli_stmt_execute($delete);
-
-                    mysqli_stmt_close($delete);
-                }
-
-
-                if ($error === "") {
-
-                    /*
-                     * Use DATE_ADD(NOW(), INTERVAL 1 HOUR)
-                     * so PHP and MySQL time cannot conflict.
-                     */
-
-                    $insert = mysqli_prepare(
-                        $conn,
-                        "INSERT INTO password_resets
-                        (user_id, token, expires_at)
-                        VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))"
-                    );
-
-                    if ($insert === false) {
-
-                        $error =
-                            "Unable to create reset request: "
-                            . mysqli_error($conn);
-
-                    } else {
-
-                        mysqli_stmt_bind_param(
-                            $insert,
-                            "is",
-                            $user_id,
-                            $token
-                        );
-
-                        if (mysqli_stmt_execute($insert)) {
-
-                            $reset_link =
-                                "http://localhost/Todo_App/auth/reset_password.php?token="
-                                . urlencode($token);
-
-                            $success =
-                                "Reset link created successfully.";
-
-                        } else {
-
-                            $error =
-                                "Unable to create reset link: "
-                                . mysqli_stmt_error($insert);
-                        }
-
-                        mysqli_stmt_close($insert);
-                    }
-                }
+                mysqli_stmt_close($stmt);
 
             } else {
 
-                $error =
-                    "No account was found with this email address.";
-            }
+                $result = mysqli_stmt_get_result($stmt);
 
-            mysqli_stmt_close($stmt);
+                if ($result === false) {
+
+                    $error =
+                        "Unable to read account information: " .
+                        mysqli_stmt_error($stmt);
+
+                    mysqli_stmt_close($stmt);
+
+                } elseif (mysqli_num_rows($result) !== 1) {
+
+                    $error =
+                        "No account was found with this email address.";
+
+                    mysqli_stmt_close($stmt);
+
+                } else {
+
+                    $user = mysqli_fetch_assoc($result);
+
+                    mysqli_stmt_close($stmt);
+
+                    $user_id = (int)$user["id"];
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | GENERATE SECURE RESET TOKEN
+                    |--------------------------------------------------------------------------
+                    */
+
+                    try {
+
+                        $token = bin2hex(
+                            random_bytes(32)
+                        );
+
+                    } catch (Exception $e) {
+
+                        $error =
+                            "Unable to generate reset token.";
+
+                        $token = "";
+                    }
+
+
+                    if ($error === "" && $token !== "") {
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | SAVE TOKEN IN USERS TABLE
+                        |--------------------------------------------------------------------------
+                        |
+                        | Your users table already contains:
+                        |
+                        | reset_token
+                        | reset_token_expiry
+                        |
+                        */
+
+                        $update = mysqli_prepare(
+                            $conn,
+                            "UPDATE users
+                             SET
+                                reset_token = ?,
+                                reset_token_expiry = DATE_ADD(NOW(), INTERVAL 1 HOUR)
+                             WHERE id = ?
+                             LIMIT 1"
+                        );
+
+                        if ($update === false) {
+
+                            $error =
+                                "Unable to create reset request: " .
+                                mysqli_error($conn);
+
+                        } else {
+
+                            mysqli_stmt_bind_param(
+                                $update,
+                                "si",
+                                $token,
+                                $user_id
+                            );
+
+                            if (!mysqli_stmt_execute($update)) {
+
+                                $error =
+                                    "Unable to save reset request: " .
+                                    mysqli_stmt_error($update);
+
+                            } else {
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | BUILD SERVER RESET LINK
+                                |--------------------------------------------------------------------------
+                                |
+                                | This automatically uses your current domain.
+                                | It will NOT use localhost.
+                                |
+                                */
+
+                                $scheme = "http";
+
+                                if (
+                                    isset($_SERVER["HTTPS"]) &&
+                                    $_SERVER["HTTPS"] !== "off"
+                                ) {
+                                    $scheme = "https";
+                                }
+
+                                $host =
+                                    $_SERVER["HTTP_HOST"] ?? "localhost";
+
+                                $base_path = rtrim(
+                                    dirname(
+                                        $_SERVER["SCRIPT_NAME"]
+                                    ),
+                                    "/\\"
+                                );
+
+                                $reset_link =
+                                    $scheme .
+                                    "://" .
+                                    $host .
+                                    $base_path .
+                                    "/reset_password.php?token=" .
+                                    urlencode($token);
+
+                                $success =
+                                    "Reset link created successfully.";
+                            }
+
+                            mysqli_stmt_close($update);
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -223,7 +291,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <br><br>
 
-                <a href="<?php echo htmlspecialchars($reset_link); ?>">
+                <a
+                    href="<?php echo htmlspecialchars($reset_link); ?>"
+                >
 
                     <?php
                     echo htmlspecialchars($reset_link);
@@ -250,6 +320,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     class="form-control"
                     placeholder="Enter your email address"
                     required
+                    value="<?php echo htmlspecialchars($_POST["email"] ?? ""); ?>"
                 >
 
             </div>
@@ -281,3 +352,4 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </body>
 
 </html>
+
