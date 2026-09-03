@@ -493,15 +493,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ===================================================== */
 
     * {
+
         box-sizing: border-box;
+
+    }
+
+
+    html,
+    body {
+
+        width: 100%;
+
+        max-width: 100%;
+
+        margin: 0;
+
+        padding: 0;
+
+        overflow-x: hidden;
+
     }
 
 
     body {
 
         background: #f5f7fb;
-
-        margin: 0;
 
         min-height: 100vh;
 
@@ -796,6 +812,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         align-items: start;
 
+        position: relative;
+
     }
 
 
@@ -817,6 +835,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             box-shadow 0.2s ease,
             border-color 0.2s ease,
             transform 0.2s ease;
+
+        position: relative;
 
     }
 
@@ -861,6 +881,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 232,
                 0.10
             );
+
+        transform: translateY(-1px);
 
     }
 
@@ -1101,6 +1123,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .task-card.touch-source {
 
         opacity: 0.25;
+
+    }
+
+
+    /* =====================================================
+       TOUCH DRAG READY
+    ===================================================== */
+
+    .task-card.touch-ready {
+
+        box-shadow:
+            0 0 0 2px rgba(
+                40,
+                123,
+                232,
+                0.18
+            ),
+            0 5px 15px rgba(
+                20,
+                30,
+                50,
+                0.10
+            );
 
     }
 
@@ -1362,6 +1407,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         touch-action: manipulation;
 
+        width: 28px;
+
+        height: 28px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
     }
 
 
@@ -1380,7 +1435,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         right: 0;
 
-        top: 20px;
+        top: 28px;
 
         z-index: 100;
 
@@ -1415,13 +1470,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         display: block;
 
-        padding: 7px 10px;
+        padding: 8px 10px;
 
         color: #344054;
 
         text-decoration: none;
 
         font-size: 11px;
+
+        white-space: nowrap;
 
     }
 
@@ -1506,10 +1563,66 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             opacity 0.2s ease,
             transform 0.2s ease;
 
+        white-space: nowrap;
+
     }
 
 
     .drag-hint.show {
+
+        opacity: 1;
+
+        transform:
+            translateX(-50%)
+            translateY(0);
+
+    }
+
+
+    /* =====================================================
+       DRAG SUCCESS MESSAGE
+    ===================================================== */
+
+    .drag-success {
+
+        position: fixed;
+
+        left: 50%;
+
+        bottom: 60px;
+
+        transform:
+            translateX(-50%)
+            translateY(15px);
+
+        background: #17233d;
+
+        color: #ffffff;
+
+        padding: 9px 16px;
+
+        border-radius: 20px;
+
+        font-size: 11px;
+
+        font-weight: 600;
+
+        opacity: 0;
+
+        pointer-events: none;
+
+        z-index: 10001;
+
+        transition:
+            opacity 0.2s ease,
+            transform 0.2s ease;
+
+        white-space: nowrap;
+
+    }
+
+
+    .drag-success.show {
 
         opacity: 1;
 
@@ -1648,6 +1761,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             -webkit-overflow-scrolling: touch;
 
+            overscroll-behavior-x: contain;
+
         }
 
 
@@ -1720,6 +1835,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             margin-bottom: 8px;
 
+            min-height: 95px;
+
         }
 
 
@@ -1737,9 +1854,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
 
+        .task-menu-button {
+
+            width: 34px;
+
+            height: 34px;
+
+            font-size: 18px;
+
+        }
+
+
+        .task-menu {
+
+            top: 7px;
+
+            right: 7px;
+
+        }
+
+
         .drag-hint {
 
             bottom: 12px;
+
+            font-size: 10px;
+
+            padding: 7px 12px;
+
+        }
+
+
+        .drag-success {
+
+            bottom: 52px;
 
             font-size: 10px;
 
@@ -1775,11 +1923,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     }
 
+
+    /* =====================================================
+       ACCESSIBILITY
+    ===================================================== */
+
+    @media (hover: none) {
+
+        .task-card:hover {
+
+            transform: none;
+
+        }
+
+    }
+
+
+    /* =====================================================
+       WHEN TOUCH DRAG IS ACTIVE
+    ===================================================== */
+
+    body.touch-drag-active {
+
+        cursor: grabbing;
+
+    }
+
+
+    body.touch-drag-active .board {
+
+        scroll-snap-type: none;
+
+    }
+
 </style>
 
 </head>
 
+
 <body>
+
 
 <!-- =========================================================
      NAVBAR
@@ -1835,6 +2018,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 ========================================================= -->
 
 <main class="task-board-page">
+
 
 <!-- =====================================================
      BOARD HEADER
@@ -2103,7 +2287,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                             <span
-                                class="task-badge <?php echo getProgressClass($row["progress"]); ?>"
+                                class="task-badge progress-badge <?php echo getProgressClass($row["progress"]); ?>"
                             >
 
                                 <?php
@@ -2321,7 +2505,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                             <span
-                                class="task-badge <?php echo getProgressClass($row["progress"]); ?>"
+                                class="task-badge progress-badge <?php echo getProgressClass($row["progress"]); ?>"
                             >
 
                                 <?php
@@ -2539,7 +2723,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                             <span
-                                class="task-badge <?php echo getProgressClass($row["progress"]); ?>"
+                                class="task-badge progress-badge <?php echo getProgressClass($row["progress"]); ?>"
                             >
 
                                 <?php
@@ -2757,7 +2941,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                             <span
-                                class="task-badge <?php echo getProgressClass($row["progress"]); ?>"
+                                class="task-badge progress-badge <?php echo getProgressClass($row["progress"]); ?>"
                             >
 
                                 <?php
@@ -2905,6 +3089,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
 
+<!-- =========================================================
+     DRAG SUCCESS
+========================================================= -->
+
+<div
+    id="dragSuccess"
+    class="drag-success"
+>
+
+    Task moved successfully
+
+</div>
+
+
+
 <script>
 
 /* =========================================================
@@ -3026,8 +3225,7 @@ document.addEventListener(
 
 
 /* =========================================================
-   DRAG AND DROP
-   DESKTOP + MOBILE TOUCH
+   DRAG VARIABLES
 ========================================================= */
 
 let draggedTaskId = null;
@@ -3036,7 +3234,14 @@ let draggedCard = null;
 
 let dropIndicator = null;
 
-let touchClone = null;
+let currentDropColumn = null;
+
+let currentDropBefore = null;
+
+
+/* =========================================================
+   TOUCH VARIABLES
+========================================================= */
 
 let touchStartX = 0;
 
@@ -3046,13 +3251,28 @@ let touchCurrentX = 0;
 
 let touchCurrentY = 0;
 
-let touchDragging = false;
-
 let touchSourceCard = null;
 
-let currentDropColumn = null;
+let touchClone = null;
 
-let currentDropBefore = null;
+let touchDragging = false;
+
+let touchLongPressTimer = null;
+
+let touchMovedBeforeDrag = false;
+
+let touchDragOffsetX = 0;
+
+let touchDragOffsetY = 0;
+
+
+/* =========================================================
+   TOUCH SETTINGS
+========================================================= */
+
+const TOUCH_LONG_PRESS_TIME = 300;
+
+const TOUCH_MOVE_THRESHOLD = 10;
 
 
 /* =========================================================
@@ -3062,6 +3282,12 @@ let currentDropBefore = null;
 const dragHint =
     document.getElementById(
         "dragHint"
+    );
+
+
+const dragSuccess =
+    document.getElementById(
+        "dragSuccess"
     );
 
 
@@ -3095,6 +3321,53 @@ function hideDragHint()
     dragHint.classList.remove(
         "show"
     );
+
+}
+
+
+/* =========================================================
+   SUCCESS MESSAGE
+========================================================= */
+
+let successTimer = null;
+
+
+function showSuccess(message)
+{
+
+    if (!dragSuccess) {
+
+        return;
+
+    }
+
+
+    dragSuccess.textContent =
+        message;
+
+
+    dragSuccess.classList.add(
+        "show"
+    );
+
+
+    clearTimeout(
+        successTimer
+    );
+
+
+    successTimer =
+        setTimeout(
+            function()
+            {
+
+                dragSuccess.classList.remove(
+                    "show"
+                );
+
+            },
+            1800
+        );
 
 }
 
@@ -3294,6 +3567,9 @@ function showDropPosition(
         before;
 
 
+    clearColumnHighlights();
+
+
     column.classList.add(
         "drag-over"
     );
@@ -3445,6 +3721,121 @@ function saveTaskProgress(
 
 
 /* =========================================================
+   UPDATE COLUMN COUNTS
+========================================================= */
+
+function updateColumnCounts()
+{
+
+    document
+        .querySelectorAll(
+            ".board-column"
+        )
+        .forEach(
+            function(column)
+            {
+
+                const count =
+                    column.querySelectorAll(
+                        ".task-list .task-card"
+                    ).length;
+
+
+                const countElement =
+                    column.querySelector(
+                        ".task-count"
+                    );
+
+
+                if (countElement) {
+
+                    countElement.textContent =
+                        count;
+
+                }
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   UPDATE PROGRESS BADGE
+========================================================= */
+
+function updateProgressBadge(
+    card,
+    progress
+)
+{
+
+    if (!card) {
+
+        return;
+
+    }
+
+
+    const badge =
+        card.querySelector(
+            ".progress-badge"
+        );
+
+
+    if (!badge) {
+
+        return;
+
+    }
+
+
+    badge.classList.remove(
+        "progress-todo",
+        "progress-progress",
+        "progress-review",
+        "progress-done"
+    );
+
+
+    let newClass =
+        "progress-todo";
+
+
+    if (progress === "In Progress") {
+
+        newClass =
+            "progress-progress";
+
+    }
+
+    else if (progress === "Review") {
+
+        newClass =
+            "progress-review";
+
+    }
+
+    else if (progress === "Done") {
+
+        newClass =
+            "progress-done";
+
+    }
+
+
+    badge.classList.add(
+        newClass
+    );
+
+
+    badge.textContent =
+        progress;
+
+}
+
+
+/* =========================================================
    DESKTOP DRAG START
 ========================================================= */
 
@@ -3516,7 +3907,9 @@ document
 
                     removeDropIndicator();
 
+
                     clearColumnHighlights();
+
 
                     hideDragHint();
 
@@ -3562,9 +3955,6 @@ document
                             "move";
 
                     }
-
-
-                    clearColumnHighlights();
 
 
                     showDropPosition(
@@ -3633,7 +4023,9 @@ document
 
                     removeDropIndicator();
 
+
                     clearColumnHighlights();
+
 
                     hideDragHint();
 
@@ -3651,7 +4043,7 @@ document
 
 
 /* =========================================================
-   TOUCH DRAG HELPERS
+   TOUCH DRAG START
 ========================================================= */
 
 function startTouchDrag(
@@ -3680,6 +4072,11 @@ function startTouchDrag(
     }
 
 
+    clearTimeout(
+        touchLongPressTimer
+    );
+
+
     const touch =
         event.touches[0];
 
@@ -3706,6 +4103,43 @@ function startTouchDrag(
 
     touchDragging =
         false;
+
+
+    touchMovedBeforeDrag =
+        false;
+
+
+    card.classList.remove(
+        "touch-ready"
+    );
+
+
+    /*
+     * Long press prevents normal
+     * mobile scrolling from becoming
+     * an accidental drag.
+     */
+
+    touchLongPressTimer =
+        setTimeout(
+            function()
+            {
+
+                if (
+                    !touchSourceCard ||
+                    touchMovedBeforeDrag
+                ) {
+
+                    return;
+
+                }
+
+
+                beginTouchDrag();
+
+            },
+            TOUCH_LONG_PRESS_TIME
+        );
 
 }
 
@@ -3737,6 +4171,16 @@ function beginTouchDrag()
 
     const rect =
         touchSourceCard.getBoundingClientRect();
+
+
+    touchDragOffsetX =
+        touchCurrentX -
+        rect.left;
+
+
+    touchDragOffsetY =
+        touchCurrentY -
+        rect.top;
 
 
     touchClone =
@@ -3783,7 +4227,23 @@ function beginTouchDrag()
     );
 
 
+    document.body.classList.add(
+        "touch-drag-active"
+    );
+
+
     showDragHint();
+
+
+    touchSourceCard.classList.remove(
+        "touch-ready"
+    );
+
+
+    moveTouchClone(
+        touchCurrentX,
+        touchCurrentY
+    );
 
 }
 
@@ -3805,22 +4265,14 @@ function moveTouchClone(
     }
 
 
-    const rect =
-        touchClone.getBoundingClientRect();
-
-
     const left =
-        x
-        -
-        (
-            rect.width / 2
-        );
+        x -
+        touchDragOffsetX;
 
 
     const top =
-        y
-        -
-        25;
+        y -
+        touchDragOffsetY;
 
 
     touchClone.style.left =
@@ -3829,6 +4281,100 @@ function moveTouchClone(
 
     touchClone.style.top =
         top + "px";
+
+}
+
+
+/* =========================================================
+   TOUCH AUTO SCROLL
+========================================================= */
+
+function autoScrollBoard(
+    x,
+    y
+)
+{
+
+    const board =
+        document.querySelector(
+            ".board"
+        );
+
+
+    if (!board) {
+
+        return;
+
+    }
+
+
+    const boardRect =
+        board.getBoundingClientRect();
+
+
+    const edge =
+        55;
+
+
+    /*
+     * Horizontal scrolling on mobile.
+     */
+
+    if (
+        x >
+        boardRect.right -
+        edge
+    ) {
+
+        board.scrollLeft += 12;
+
+    }
+
+
+    else if (
+        x <
+        boardRect.left +
+        edge
+    ) {
+
+        board.scrollLeft -= 12;
+
+    }
+
+
+    /*
+     * Vertical page scrolling.
+     */
+
+    const verticalEdge =
+        65;
+
+
+    if (
+        y >
+        window.innerHeight -
+        verticalEdge
+    ) {
+
+        window.scrollBy(
+            0,
+            10
+        );
+
+    }
+
+
+    else if (
+        y <
+        verticalEdge
+    ) {
+
+        window.scrollBy(
+            0,
+            -10
+        );
+
+    }
 
 }
 
@@ -3900,29 +4446,55 @@ document
 
                     const distanceX =
                         Math.abs(
-                            touchCurrentX
-                            -
+                            touchCurrentX -
                             touchStartX
                         );
 
 
                     const distanceY =
                         Math.abs(
-                            touchCurrentY
-                            -
+                            touchCurrentY -
                             touchStartY
                         );
 
 
+                    /*
+                     * If user moves before
+                     * long press, cancel drag.
+                     *
+                     * This allows normal
+                     * scrolling.
+                     */
+
                     if (
                         !touchDragging &&
                         (
-                            distanceX > 8 ||
-                            distanceY > 8
+                            distanceX >
+                                TOUCH_MOVE_THRESHOLD ||
+                            distanceY >
+                                TOUCH_MOVE_THRESHOLD
                         )
                     ) {
 
-                        beginTouchDrag();
+                        touchMovedBeforeDrag =
+                            true;
+
+
+                        clearTimeout(
+                            touchLongPressTimer
+                        );
+
+
+                        touchSourceCard.classList.remove(
+                            "touch-ready"
+                        );
+
+
+                        touchSourceCard =
+                            null;
+
+
+                        return;
 
                     }
 
@@ -3943,14 +4515,17 @@ document
                     );
 
 
+                    autoScrollBoard(
+                        touchCurrentX,
+                        touchCurrentY
+                    );
+
+
                     const column =
                         getColumnFromPoint(
                             touchCurrentX,
                             touchCurrentY
                         );
-
-
-                    clearColumnHighlights();
 
 
                     if (column) {
@@ -3971,8 +4546,13 @@ document
 
             card.addEventListener(
                 "touchend",
-                function(event)
+                function()
                 {
+
+                    clearTimeout(
+                        touchLongPressTimer
+                    );
+
 
                     if (
                         !touchSourceCard ||
@@ -3986,8 +4566,14 @@ document
 
                     if (!touchDragging) {
 
+                        this.classList.remove(
+                            "touch-ready"
+                        );
+
+
                         touchSourceCard =
                             null;
+
 
                         return;
 
@@ -4001,11 +4587,11 @@ document
                         );
 
 
-                    let taskId =
+                    const taskId =
                         draggedTaskId;
 
 
-                    let newProgress =
+                    const newProgress =
                         column
                         ? column.dataset.progress
                         : "";
@@ -4015,6 +4601,20 @@ document
                         taskId &&
                         newProgress
                     ) {
+
+                        /*
+                         * Remove indicator before
+                         * sending the existing POST.
+                         */
+
+                        removeDropIndicator();
+
+
+                        clearColumnHighlights();
+
+
+                        hideDragHint();
+
 
                         saveTaskProgress(
                             taskId,
@@ -4035,6 +4635,11 @@ document
                 function()
                 {
 
+                    clearTimeout(
+                        touchLongPressTimer
+                    );
+
+
                     finishTouchDrag();
 
                 }
@@ -4050,6 +4655,11 @@ document
 
 function finishTouchDrag()
 {
+
+    clearTimeout(
+        touchLongPressTimer
+    );
+
 
     if (touchClone) {
 
@@ -4068,6 +4678,10 @@ function finishTouchDrag()
             "touch-source"
         );
 
+        touchSourceCard.classList.remove(
+            "touch-ready"
+        );
+
     }
 
 
@@ -4083,9 +4697,16 @@ function finishTouchDrag()
         null;
 
 
+    document.body.classList.remove(
+        "touch-drag-active"
+    );
+
+
     removeDropIndicator();
 
+
     clearColumnHighlights();
+
 
     hideDragHint();
 
@@ -4133,7 +4754,7 @@ document
 
 
 /* =========================================================
-   MOBILE HORIZONTAL SCROLL
+   MOBILE BOARD TOUCH
 ========================================================= */
 
 const board =
@@ -4142,45 +4763,23 @@ const board =
     );
 
 
-let boardTouchStartX = 0;
-
-let boardTouchStartY = 0;
-
-
 if (board) {
 
     board.addEventListener(
-        "touchstart",
+        "touchmove",
         function(event)
         {
 
-            if (
-                touchDragging ||
-                event.target.closest(
-                    ".task-card"
-                )
-            ) {
+            /*
+             * Do not interfere with normal
+             * horizontal board scrolling.
+             */
+
+            if (!touchDragging) {
 
                 return;
 
             }
-
-
-            if (
-                event.touches.length !== 1
-            ) {
-
-                return;
-
-            }
-
-
-            boardTouchStartX =
-                event.touches[0].clientX;
-
-
-            boardTouchStartY =
-                event.touches[0].clientY;
 
         },
         {
@@ -4212,7 +4811,30 @@ document.addEventListener(
     }
 );
 
+
+/* =========================================================
+   CLEANUP WHEN PAGE BECOMES HIDDEN
+========================================================= */
+
+document.addEventListener(
+    "visibilitychange",
+    function()
+    {
+
+        if (
+            document.hidden &&
+            touchDragging
+        ) {
+
+            finishTouchDrag();
+
+        }
+
+    }
+);
+
 </script>
+
 
 </body>
 

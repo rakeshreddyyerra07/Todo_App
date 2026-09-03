@@ -995,7 +995,8 @@ if (
                     id,
                     name,
                     email,
-                    password
+                    password,
+                    role
                  FROM users
                  WHERE email = ?
                  LIMIT 1"
@@ -1114,6 +1115,16 @@ if (
 
                     $_SESSION["user_email"] =
                         $user["email"];
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | USER ROLE
+                    |--------------------------------------------------------------------------
+                    */
+
+                    $_SESSION["user_role"] =
+                        $user["role"];
 
 
                     /*
