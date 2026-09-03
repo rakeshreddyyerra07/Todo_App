@@ -456,7 +456,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <head>
 
-```
 <meta charset="UTF-8">
 
 <meta
@@ -1025,6 +1024,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         margin-bottom: 8px;
 
+        flex-wrap: wrap;
+
     }
 
 
@@ -1116,6 +1117,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         background: #168b55;
 
         color: #ffffff;
+
+    }
+
+
+    /* =====================================================
+       COMPLETION
+    ===================================================== */
+
+    .completion-complete {
+
+        background: #d1e7dd;
+
+        color: #0f5132;
+
+    }
+
+
+    .completion-incomplete {
+
+        background: #f8d7da;
+
+        color: #842029;
 
     }
 
@@ -1368,7 +1391,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 </style>
-```
 
 </head>
 
@@ -1380,7 +1402,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <nav class="navbar">
 
-```
 <div class="nav-container">
 
 
@@ -1420,7 +1441,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </div>
 
 </div>
-```
 
 </nav>
 
@@ -1430,7 +1450,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <main class="task-board-page">
 
-```
 <!-- =====================================================
      BOARD HEADER
 ====================================================== -->
@@ -1718,6 +1737,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             </span>
 
 
+                            <?php if ((int)$row["is_completed"] === 1): ?>
+
+                                <span class="task-badge completion-complete">
+
+                                    Completed
+
+                                </span>
+
+                            <?php else: ?>
+
+                                <span class="task-badge completion-incomplete">
+
+                                    Incomplete
+
+                                </span>
+
+                            <?php endif; ?>
+
+
                         </div>
 
 
@@ -1919,6 +1957,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             </span>
 
+
+                            <?php if ((int)$row["is_completed"] === 1): ?>
+
+                                <span class="task-badge completion-complete">
+
+                                    Completed
+
+                                </span>
+
+                            <?php else: ?>
+
+                                <span class="task-badge completion-incomplete">
+
+                                    Incomplete
+
+                                </span>
+
+                            <?php endif; ?>
+
+
                         </div>
 
 
@@ -2115,6 +2173,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 ?>
 
                             </span>
+
+
+                            <?php if ((int)$row["is_completed"] === 1): ?>
+
+                                <span class="task-badge completion-complete">
+
+                                    Completed
+
+                                </span>
+
+                            <?php else: ?>
+
+                                <span class="task-badge completion-incomplete">
+
+                                    Incomplete
+
+                                </span>
+
+                            <?php endif; ?>
+
 
                         </div>
 
@@ -2313,6 +2391,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             </span>
 
+
+                            <?php if ((int)$row["is_completed"] === 1): ?>
+
+                                <span class="task-badge completion-complete">
+
+                                    Completed
+
+                                </span>
+
+                            <?php else: ?>
+
+                                <span class="task-badge completion-incomplete">
+
+                                    Incomplete
+
+                                </span>
+
+                            <?php endif; ?>
+
+
                         </div>
 
 
@@ -2410,7 +2508,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 </div>
-```
 
 </main>
 
