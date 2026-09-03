@@ -9,6 +9,8 @@ $success = "";
 
 $token = $_GET["token"] ?? $_POST["token"] ?? "";
 
+$token = trim($token);
+
 
 /* =========================================================
    CHECK RESET TOKEN
@@ -22,10 +24,11 @@ if ($token === "") {
 
     $stmt = mysqli_prepare(
         $conn,
-        "SELECT id, user_id
-         FROM password_resets
-         WHERE token = ?
-         AND expires_at > NOW()
+        "SELECT id, name, email
+         FROM users
+         WHERE reset_token = ?
+         AND reset_token_expiry IS NOT NULL
+         AND reset_token_expiry > NOW()
          LIMIT 1"
     );
 
@@ -42,20 +45,20 @@ if ($token === "") {
             $token
         );
 
-        mysqli_stmt_execute($stmt);
+        if (!mysqli_stmt_execute($stmt)) {
 
-        $result = mysqli_stmt_get_result($stmt);
+            $error = "Unable to verify reset link.";
 
+        } else {
 
-        if (
-            !$result ||
-            mysqli_num_rows($result) !== 1
-        ) {
+            mysqli_stmt_store_result($stmt);
 
-            $error =
-                "This password reset link is invalid or expired.";
+            if (mysqli_stmt_num_rows($stmt) !== 1) {
+
+                $error =
+                    "This password reset link is invalid or expired.";
+            }
         }
-
 
         mysqli_stmt_close($stmt);
     }
@@ -106,15 +109,16 @@ if (
 
 
         /* =================================================
-           GET USER ID FROM TOKEN
+           GET USER USING RESET TOKEN
         ================================================= */
 
         $stmt = mysqli_prepare(
             $conn,
-            "SELECT user_id
-             FROM password_resets
-             WHERE token = ?
-             AND expires_at > NOW()
+            "SELECT id
+             FROM users
+             WHERE reset_token = ?
+             AND reset_token_expiry IS NOT NULL
+             AND reset_token_expiry > NOW()
              LIMIT 1"
         );
 
@@ -133,140 +137,125 @@ if (
                 $token
             );
 
-            mysqli_stmt_execute($stmt);
 
-            $result =
-                mysqli_stmt_get_result($stmt);
+            if (!mysqli_stmt_execute($stmt)) {
 
+                $error =
+                    "Unable to verify reset token.";
 
-            if (
-                $result &&
-                mysqli_num_rows($result) === 1
-            ) {
-
-                $reset =
-                    mysqli_fetch_assoc($result);
-
-
-                /* =========================================
-                   HASH PASSWORD
-                ========================================= */
-
-                $hashed_password =
-                    password_hash(
-                        $password,
-                        PASSWORD_DEFAULT
-                    );
-
-
-                /* =========================================
-                   UPDATE PASSWORD
-                ========================================= */
-
-                $update = mysqli_prepare(
-                    $conn,
-                    "UPDATE users
-                     SET password = ?
-                     WHERE id = ?"
-                );
-
-
-                if ($update === false) {
-
-                    $error =
-                        "Database Error: " .
-                        mysqli_error($conn);
-
-                } else {
-
-                    mysqli_stmt_bind_param(
-                        $update,
-                        "si",
-                        $hashed_password,
-                        $reset["user_id"]
-                    );
-
-
-                    if (
-                        mysqli_stmt_execute(
-                            $update
-                        )
-                    ) {
-
-
-                        /* =================================
-                           DELETE USED RESET TOKEN
-                        ================================= */
-
-                        $delete = mysqli_prepare(
-                            $conn,
-                            "DELETE FROM password_resets
-                             WHERE token = ?"
-                        );
-
-
-                        if ($delete !== false) {
-
-                            mysqli_stmt_bind_param(
-                                $delete,
-                                "s",
-                                $token
-                            );
-
-                            mysqli_stmt_execute(
-                                $delete
-                            );
-
-                            mysqli_stmt_close(
-                                $delete
-                            );
-                        }
-
-
-                        mysqli_stmt_close(
-                            $update
-                        );
-
-                        mysqli_stmt_close(
-                            $stmt
-                        );
-
-
-                        /* ================================
-                           GO TO LOGIN
-                        ================================= */
-
-                        header(
-                            "Location: login.php?reset=1"
-                        );
-
-                        exit;
-
-
-                    } else {
-
-                        $error =
-                            "Unable to update password.";
-
-                    }
-
-
-                    mysqli_stmt_close(
-                        $update
-                    );
-                }
-
+                mysqli_stmt_close($stmt);
 
             } else {
 
-                $error =
-                    "Invalid or expired reset link.";
+                mysqli_stmt_store_result($stmt);
+
+
+                if (mysqli_stmt_num_rows($stmt) === 1) {
+
+                    mysqli_stmt_bind_result(
+                        $stmt,
+                        $user_id
+                    );
+
+                    mysqli_stmt_fetch($stmt);
+
+
+                    /* =====================================
+                       HASH PASSWORD
+                    ===================================== */
+
+                    $hashed_password =
+                        password_hash(
+                            $password,
+                            PASSWORD_DEFAULT
+                        );
+
+
+                    if ($hashed_password === false) {
+
+                        $error =
+                            "Unable to secure the new password.";
+
+                    } else {
+
+
+                        /* =================================
+                           UPDATE PASSWORD + CLEAR TOKEN
+                        ================================= */
+
+                        $update = mysqli_prepare(
+                            $conn,
+                            "UPDATE users
+                             SET password = ?,
+                                 reset_token = NULL,
+                                 reset_token_expiry = NULL
+                             WHERE id = ?
+                             LIMIT 1"
+                        );
+
+
+                        if ($update === false) {
+
+                            $error =
+                                "Database Error: " .
+                                mysqli_error($conn);
+
+                        } else {
+
+                            mysqli_stmt_bind_param(
+                                $update,
+                                "si",
+                                $hashed_password,
+                                $user_id
+                            );
+
+
+                            if (
+                                mysqli_stmt_execute(
+                                    $update
+                                )
+                            ) {
+
+                                mysqli_stmt_close(
+                                    $update
+                                );
+
+                                mysqli_stmt_close(
+                                    $stmt
+                                );
+
+
+                                /* =========================
+                                   PASSWORD RESET SUCCESS
+                                ========================= */
+
+                                header(
+                                    "Location: login.php?reset=1"
+                                );
+
+                                exit;
+
+                            } else {
+
+                                $error =
+                                    "Unable to update password.";
+
+                                mysqli_stmt_close(
+                                    $update
+                                );
+                            }
+                        }
+                    }
+
+                } else {
+
+                    $error =
+                        "Invalid or expired reset link.";
+                }
+
+
+                mysqli_stmt_close($stmt);
             }
-
-
-            mysqli_stmt_close(
-                $stmt
-            );
         }
     }
 }
@@ -394,6 +383,7 @@ if (
                         class="form-control"
                         placeholder="Enter new password"
                         required
+                        minlength="6"
                     >
 
 
@@ -419,6 +409,7 @@ if (
                         class="form-control"
                         placeholder="Confirm new password"
                         required
+                        minlength="6"
                     >
 
 
