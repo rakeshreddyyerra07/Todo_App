@@ -21,11 +21,13 @@ if (!isset($_SESSION["user_id"])) {
    USER ROLE / PERMISSIONS
 ========================================================= */
 
-$user_role = $_SESSION["user_role"] ?? "user";
+$user_role = trim(strtolower($_SESSION["user_role"] ?? "user"));
 
 $is_admin = ($user_role === "admin");
 
 $is_user = ($user_role === "user");
+
+$display_role = ucfirst($user_role);
 
 
 /* =========================================================
@@ -456,6 +458,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .welcome-text {
             color: #52627a;
             font-size: 14px;
+        }
+
+
+        /* =====================================================
+           USER ROLE BADGE
+        ===================================================== */
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 65px;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 20px;
+            background: #e8f1ff;
+            color: #1261b5;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: capitalize;
         }
 
 
@@ -1165,6 +1187,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <strong>
                     <?= htmlspecialchars($_SESSION["user_name"] ?? "User") ?>
                 </strong>
+
+            </span>
+
+
+            <!-- USER ROLE -->
+
+            <span class="role-badge me-3">
+
+                <?= htmlspecialchars($display_role) ?>
 
             </span>
 
