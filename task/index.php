@@ -31,6 +31,94 @@ $display_role = ucfirst($user_role);
 
 
 /* =========================================================
+   BOARD / CREATE BOARD
+========================================================= */
+
+$selected_board_id = isset($_GET["board_id"]) ? (int)$_GET["board_id"] : 0;
+
+$board_error = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "create_board") {
+
+    if (!($is_admin || $is_user)) {
+        $board_error = "You do not have permission to create a board.";
+    } else {
+        $board_name = trim($_POST["board_name"] ?? "");
+        $board_description = trim($_POST["board_description"] ?? "");
+
+        if ($board_name === "") {
+            $board_error = "Board name is required.";
+        } else {
+            $board_stmt = mysqli_prepare(
+                $conn,
+                "INSERT INTO boards (name, description, created_by) VALUES (?, ?, ?)"
+            );
+
+            if (!$board_stmt) {
+                $board_error = "Database Error: " . mysqli_error($conn);
+            } else {
+                $created_by = (int)$_SESSION["user_id"];
+                mysqli_stmt_bind_param(
+                    $board_stmt,
+                    "ssi",
+                    $board_name,
+                    $board_description,
+                    $created_by
+                );
+
+                if (mysqli_stmt_execute($board_stmt)) {
+                    $new_board_id = mysqli_insert_id($conn);
+                    header("Location: index.php?board_id=" . (int)$new_board_id);
+                    exit();
+                }
+
+                $board_error = "Database Error: " . mysqli_stmt_error($board_stmt);
+                mysqli_stmt_close($board_stmt);
+            }
+        }
+    }
+}
+
+
+/* =========================================================
+   LOAD BOARDS
+========================================================= */
+
+$boards = [];
+
+$board_result = mysqli_query(
+    $conn,
+    "SELECT id, name, description FROM boards ORDER BY id ASC"
+);
+
+if (!$board_result) {
+    die("Database Error: " . mysqli_error($conn));
+}
+
+while ($board_row = mysqli_fetch_assoc($board_result)) {
+    $boards[] = $board_row;
+}
+
+if ($selected_board_id === 0 && !empty($boards)) {
+    $selected_board_id = (int)$boards[0]["id"];
+}
+
+$selected_board = null;
+
+foreach ($boards as $board_row) {
+    if ((int)$board_row["id"] === $selected_board_id) {
+        $selected_board = $board_row;
+        break;
+    }
+}
+
+if ($selected_board === null && !empty($boards)) {
+    $selected_board_id = (int)$boards[0]["id"];
+    $selected_board = $boards[0];
+}
+
+
+/* =========================================================
    SEARCH / FILTER VALUES
 ========================================================= */
 
@@ -61,6 +149,21 @@ if ($search !== "") {
     $params[] = "%" . $search . "%";
 
     $types .= "s";
+
+}
+
+
+/* =========================================================
+   PROGRESS FILTER
+========================================================= */
+
+if ($selected_board_id > 0) {
+
+    $where[] = "board_id = ?";
+
+    $params[] = $selected_board_id;
+
+    $types .= "i";
 
 }
 
@@ -103,6 +206,7 @@ if (!empty($where)) {
 $sql = "
     SELECT
         id,
+        board_id,
         task,
         description,
         status,
@@ -651,6 +755,94 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .task-filter select:focus {
         border-color: #86b7fe;
         box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+    }
+
+
+    .add-board-btn {
+        height: 48px;
+        padding: 0 20px;
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+
+    .board-list-wrapper {
+        margin-bottom: 18px;
+        padding: 18px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+    }
+
+
+    .board-list-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+
+    .board-list-title {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+
+    .board-list-subtitle {
+        margin-top: 3px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+
+    .board-list {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+
+
+    .board-list-item {
+        display: inline-flex;
+        align-items: center;
+        min-width: 150px;
+        min-height: 48px;
+        padding: 10px 16px;
+        border: 1px solid #d9dee7;
+        border-radius: 9px;
+        background: #f8fafc;
+        color: #1f2937;
+        text-decoration: none;
+        font-weight: 600;
+        transition: .15s ease;
+    }
+
+
+    .board-list-item:hover {
+        border-color: #1473e6;
+        color: #1473e6;
+    }
+
+
+    .board-list-item.active {
+        background: #1473e6;
+        border-color: #1473e6;
+        color: #ffffff;
+    }
+
+
+    .board-list-item-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+
+    .board-list-empty {
+        color: #6b7280;
+        padding: 10px 0;
     }
 
 
@@ -1841,7 +2033,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
 
-        .add-task-btn {
+        .add-task-btn,
+        .add-board-btn {
             width: 100%;
         }
 
@@ -1928,6 +2121,385 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
     }
+
+
+
+    /* =====================================================
+       CARD DETAILS UI - POLISHED LAYOUT
+       Additive styling only: existing board/card functionality
+       and existing element IDs are preserved.
+    ===================================================== */
+
+    .task-details-modal .modal-dialog.trello-card-dialog {
+        width: calc(100% - 32px);
+        max-width: 920px;
+        max-height: 92vh;
+        margin: 1rem auto;
+    }
+
+    .task-details-modal .trello-card-content {
+        height: 92vh;
+        max-height: 92vh;
+        border: 1px solid #e1e7ef;
+        border-radius: 12px;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 18px 55px rgba(23, 43, 77, .18);
+    }
+
+    .task-details-modal .trello-card-header {
+        min-height: 67px;
+        padding: 14px 22px;
+        flex: 0 0 auto;
+        border-bottom: 1px solid #e5eaf1;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .task-details-modal .trello-card-eyebrow {
+        font-size: 11px;
+        line-height: 1;
+        color: #60718b;
+        letter-spacing: .45px;
+    }
+
+    .task-details-modal .trello-card-eyebrow i {
+        color: #5f6f87;
+        font-size: 12px;
+    }
+
+    .task-details-modal .trello-card-header .btn-close {
+        width: 26px;
+        height: 26px;
+        padding: 4px;
+        opacity: .62;
+        background-size: 18px;
+    }
+
+    .task-details-modal .trello-card-header .btn-close:hover {
+        opacity: 1;
+    }
+
+    .task-details-modal .trello-card-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 28px 26px 30px;
+        background: #fff;
+        scrollbar-width: thin;
+    }
+
+    .task-details-modal .trello-card-layout {
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 34px;
+        align-items: stretch;
+        min-height: 100%;
+    }
+
+    .task-details-modal .trello-card-main {
+        min-width: 0;
+        padding-right: 1px;
+    }
+
+    .task-details-modal .trello-card-title-row {
+        gap: 13px;
+        margin: 0 0 25px;
+    }
+
+    .task-details-modal .trello-card-title-icon {
+        margin-top: 4px;
+        color: #6c7d96;
+        font-size: 21px;
+    }
+
+    .task-details-modal .task-detail-title {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+        font-weight: 800;
+        color: #132b4f;
+    }
+
+    .task-details-modal .trello-card-section {
+        margin-bottom: 29px;
+    }
+
+    .task-details-modal .trello-card-section-heading,
+    .task-details-modal .trello-card-section-heading-row .trello-card-section-heading {
+        margin-bottom: 12px;
+        font-size: 15px;
+        line-height: 1.2;
+        color: #18355d;
+    }
+
+    .task-details-modal .trello-card-section-heading i {
+        font-size: 16px;
+        color: #46698f;
+    }
+
+    .task-details-modal .task-detail-description {
+        margin-bottom: 0;
+        min-height: 62px;
+        padding: 16px 17px;
+        border: 1px solid #dce4ee;
+        border-radius: 11px;
+        background: #f7f9fc;
+        color: #4f6584;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .task-details-modal .trello-comment-composer {
+        gap: 12px;
+    }
+
+    .task-details-modal .trello-avatar {
+        width: 42px;
+        height: 42px;
+        background: #e5ebf4;
+        color: #5a6f8b;
+        font-size: 17px;
+    }
+
+    .task-details-modal #taskCommentInput {
+        min-height: 60px;
+        padding: 11px 14px;
+        border-color: #ccd8e7;
+        border-radius: 10px;
+        color: #233b5d;
+        background: #fff;
+        font-size: 15px;
+        box-shadow: none;
+    }
+
+    .task-details-modal #taskCommentInput:focus {
+        border-color: #6da2e8;
+        box-shadow: 0 0 0 3px rgba(13,110,253,.08);
+    }
+
+    .task-details-modal #addCommentButton {
+        min-width: 96px;
+        min-height: 42px;
+        padding: 8px 15px;
+        border-radius: 10px;
+        background: #2f80ed;
+        border-color: #2f80ed;
+        box-shadow: 0 7px 16px rgba(47,128,237,.18);
+    }
+
+    .task-details-modal #addCommentButton:hover {
+        background: #246fd1;
+        border-color: #246fd1;
+    }
+
+    .task-details-modal .task-comments-list {
+        max-height: none;
+        overflow: visible;
+        padding: 0;
+    }
+
+    .task-details-modal .task-comment-item {
+        padding: 14px 15px;
+        margin-bottom: 10px;
+        border-color: #dfe6ef;
+        border-radius: 11px;
+        background: #f8fafc;
+    }
+
+    .task-details-modal .task-comment-user {
+        font-size: 14px;
+        color: #18355d;
+    }
+
+    .task-details-modal .task-comment-date {
+        font-size: 12px;
+        color: #74839a;
+    }
+
+    .task-details-modal .task-comment-text {
+        font-size: 14px;
+        line-height: 1.55;
+        color: #4f6584;
+    }
+
+    .task-details-modal .trello-card-section-heading-row {
+        margin-bottom: 12px;
+    }
+
+    .task-details-modal .trello-card-section-heading-row > label {
+        margin-left: auto;
+        padding: 4px 9px !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #526b89 !important;
+        font-weight: 600;
+        box-shadow: none !important;
+    }
+
+    .task-details-modal .trello-card-section-heading-row > label:hover {
+        color: #1473e6 !important;
+        background: #f1f5f9 !important;
+    }
+
+    .task-details-modal .task-attachments-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .task-details-modal .task-attachment-item {
+        min-width: 0;
+        padding: 10px;
+        border-color: #dfe6ef;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    .task-details-modal .task-attachment-preview {
+        max-height: 145px;
+        margin-bottom: 9px;
+        border: 1px solid #edf1f6;
+        background: #f7f9fc;
+    }
+
+    .task-details-modal .attachment-file-icon {
+        width: 52px;
+        height: 52px;
+        margin-bottom: 8px;
+    }
+
+    .task-details-modal .task-attachment-name {
+        font-size: 13px;
+    }
+
+    .task-details-modal .trello-card-sidebar {
+        border-left: 1px solid #dfe6ef;
+        padding-left: 25px;
+        min-width: 0;
+    }
+
+    .task-details-modal .trello-sidebar-label {
+        margin-bottom: 20px;
+        font-size: 12px;
+        color: #687a94;
+        letter-spacing: .35px;
+    }
+
+    .task-details-modal .trello-sidebar-item {
+        gap: 7px;
+        margin-bottom: 18px;
+    }
+
+    .task-details-modal .trello-sidebar-item-label {
+        font-size: 12px;
+        color: #8794a8;
+        letter-spacing: .25px;
+    }
+
+    .task-details-modal .trello-chip {
+        min-height: 34px;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 14px;
+        background: #e9f2ff;
+        color: #1261b5;
+    }
+
+    .task-details-modal .trello-chip-date {
+        width: fit-content;
+        max-width: 100%;
+        background: #f0f2f4;
+        color: #566272;
+        font-size: 12.5px;
+        white-space: normal;
+        text-align: left;
+    }
+
+    .task-details-modal .trello-chip.complete,
+    .task-details-modal .trello-chip.status-active {
+        background: #d9eee2;
+        color: #246044;
+    }
+
+    .task-details-modal .trello-chip.incomplete,
+    .task-details-modal .trello-chip.status-inactive {
+        background: #f9e0e3;
+        color: #a42835;
+    }
+
+    .task-details-modal .trello-sidebar-divider {
+        margin: 6px 0 20px;
+        background: #dfe6ef;
+    }
+
+    .task-details-modal .modal-footer {
+        flex: 0 0 auto;
+        min-height: 66px;
+        padding: 10px 14px;
+        border-top: 1px solid #e2e8f0;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .task-details-modal .task-details-close-btn {
+        min-width: 112px;
+        min-height: 43px;
+        border: 0;
+        border-radius: 9px;
+        background: #687583;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .task-details-modal .task-details-close-btn:hover {
+        background: #566270;
+    }
+
+    @media (max-width: 767px) {
+        .task-details-modal .modal-dialog.trello-card-dialog {
+            width: calc(100% - 16px);
+            margin: .5rem auto;
+            max-height: 96vh;
+        }
+
+        .task-details-modal .trello-card-content {
+            height: 96vh;
+            max-height: 96vh;
+        }
+
+        .task-details-modal .trello-card-body {
+            padding: 22px 16px 24px;
+        }
+
+        .task-details-modal .trello-card-layout {
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .task-details-modal .trello-card-sidebar {
+            border-left: 0;
+            border-top: 1px solid #dfe6ef;
+            padding-left: 0;
+            padding-top: 22px;
+        }
+
+        .task-details-modal .task-attachments-list {
+            grid-template-columns: 1fr;
+        }
+
+        .task-details-modal .task-detail-title {
+            font-size: 21px;
+        }
+    }
+
 
 </style>
 
@@ -2128,17 +2700,62 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <?php if ($is_admin || $is_user): ?>
 
-            <a
-                href="add.php"
-                class="btn btn-primary add-task-btn"
+            <button
+                type="button"
+                class="btn btn-primary add-board-btn"
+                id="addBoardBtn"
             >
-
                 + Add Board
+            </button>
 
-            </a>
+            <button
+                type="button"
+                class="btn btn-primary add-task-btn"
+                id="topAddTaskBtn"
+                data-progress="Todo"
+            >
+                + Add Card/Task
+            </button>
 
         <?php endif; ?>
 
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BOARD LIST
+========================================================= -->
+
+<div class="board-list-wrapper">
+
+    <div class="board-list-header">
+        <div>
+            <div class="board-list-title">Boards</div>
+            <div class="board-list-subtitle">Select a board to view its cards/tasks</div>
+        </div>
+    </div>
+
+    <div class="board-list">
+
+        <?php foreach ($boards as $board): ?>
+
+            <a
+                href="?board_id=<?= (int)$board["id"] ?>&search=<?= urlencode($search) ?>&progress=<?= urlencode($progress_filter) ?>"
+                class="board-list-item <?= ((int)$board["id"] === $selected_board_id) ? "active" : "" ?>"
+            >
+                <span class="board-list-item-name">
+                    <?= htmlspecialchars($board["name"]) ?>
+                </span>
+            </a>
+
+        <?php endforeach; ?>
+
+        <?php if (empty($boards)): ?>
+            <div class="board-list-empty">No boards yet. Click <strong>+ Add Board</strong> to create one.</div>
+        <?php endif; ?>
 
     </div>
 
@@ -3288,6 +3905,71 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 <!-- =========================================================
+     ADD BOARD MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="addBoardModal"
+    tabindex="-1"
+    aria-labelledby="addBoardModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addBoardModalLabel">Add Board</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form method="POST" action="index.php">
+                <div class="modal-body">
+                    <?php if ($board_error !== ""): ?>
+                        <div class="alert alert-danger">
+                            <?= htmlspecialchars($board_error) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <input type="hidden" name="action" value="create_board">
+
+                    <div class="mb-3">
+                        <label class="form-label">Board Name</label>
+                        <input
+                            type="text"
+                            name="board_name"
+                            class="form-control"
+                            maxlength="255"
+                            placeholder="Enter board name"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea
+                            name="board_description"
+                            class="form-control"
+                            rows="4"
+                            placeholder="Enter board description"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Add Board
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- =========================================================
      ADD TASK MODAL
 ========================================================= -->
 
@@ -3329,6 +4011,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ></div>
 
             <form id="addTaskForm">
+
+                <input
+                    type="hidden"
+                    name="board_id"
+                    id="addTaskBoardId"
+                    value="<?= (int)$selected_board_id ?>"
+                >
 
                 <div class="mb-3">
 
@@ -6273,6 +6962,23 @@ document.addEventListener(
    ADD / EDIT TASK MODALS
 ========================================================= */
 
+const addBoardModalElement =
+    document.getElementById(
+        "addBoardModal"
+    );
+
+
+let addBoardModal = null;
+
+
+if (addBoardModalElement) {
+    addBoardModal =
+        new bootstrap.Modal(
+            addBoardModalElement
+        );
+}
+
+
 const addTaskModalElement =
     document.getElementById(
         "addTaskModal"
@@ -6334,6 +7040,15 @@ function openAddTaskModal(progress)
     if (form) {
 
         form.reset();
+
+        const boardInput =
+            document.getElementById(
+                "addTaskBoardId"
+            );
+
+        if (boardInput) {
+            boardInput.value = "<?= (int)$selected_board_id ?>";
+        }
 
     }
 
@@ -6686,36 +7401,39 @@ document.addEventListener(
            TOP RIGHT "+ ADD BOARD" BUTTON
         ================================================= */
 
-        const addBtn =
+        const addBoardBtn =
             event.target.closest(
-                "a.add-task-btn"
+                "#addBoardBtn"
             );
 
-
-        if (addBtn) {
-
+        if (addBoardBtn) {
             event.preventDefault();
 
+            if (addBoardModal) {
+                addBoardModal.show();
+            }
 
-            const url =
-                new URL(
-                    addBtn.href,
-                    window.location.href
-                );
+            return;
+        }
 
 
-            const progress =
-                url.searchParams.get(
-                    "progress"
-                ) || "Todo";
+        /* =================================================
+           TOP RIGHT "+ ADD CARD/TASK" BUTTON
+        ================================================= */
 
+        const topAddTaskBtn =
+            event.target.closest(
+                "#topAddTaskBtn"
+            );
+
+        if (topAddTaskBtn) {
+            event.preventDefault();
 
             openAddTaskModal(
-                progress
+                topAddTaskBtn.dataset.progress || "Todo"
             );
 
             return;
-
         }
 
 
