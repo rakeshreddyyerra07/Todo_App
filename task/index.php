@@ -51,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
         } else {
             $board_stmt = mysqli_prepare(
                 $conn,
-                "INSERT INTO boards (name, description, created_by) VALUES (?, ?, ?)"
+                "INSERT INTO todo_app.boards (name, description, created_by) VALUES (?, ?, ?)"
             );
 
             if (!$board_stmt) {
@@ -88,7 +88,7 @@ $boards = [];
 
 $board_result = mysqli_query(
     $conn,
-    "SELECT id, name, description FROM boards ORDER BY id ASC"
+    "SELECT id, name, description FROM todo_app.boards ORDER BY id ASC"
 );
 
 if (!$board_result) {
@@ -215,7 +215,7 @@ $sql = "
         is_completed,
         addedDate,
         editedDate
-    FROM tasks
+    FROM todo_app.tasks
     $where_sql
     ORDER BY id DESC
 ";
@@ -437,7 +437,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $update_sql = "
-            UPDATE tasks
+            UPDATE todo_app.tasks
             SET
                 progress = ?,
                 editedDate = NOW()
