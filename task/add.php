@@ -1,4 +1,3 @@
-
 <?php
 
 session_start();
@@ -19,17 +18,22 @@ if (!isset($_SESSION["user_id"])) {
 
 
 /* =========================================================
-   ADMIN ACCESS ONLY
+   USER ACCESS
+   ADMIN + USER CAN ADD TASKS
 ========================================================= */
 
 $user_role = $_SESSION["user_role"] ?? "user";
 
-if ($user_role !== "admin") {
 
-    header("Location: index.php");
-    exit();
+/* =========================================================
+   AJAX DETECTION
+   USED BY THE ADD TASK MODAL
+========================================================= */
 
-}
+$is_ajax = (
+    isset($_SERVER["HTTP_X_REQUESTED_WITH"]) &&
+    strtolower($_SERVER["HTTP_X_REQUESTED_WITH"]) === "xmlhttprequest"
+);
 
 
 $error = "";
@@ -134,6 +138,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             if ($stmt->execute()) {
 
+                if ($is_ajax) {
+
+                    $stmt->close();
+
+                    header("Content-Type: application/json");
+
+                    echo json_encode([
+                        "success" => true,
+                        "message" => "Task added successfully."
+                    ]);
+
+                    exit();
+
+                }
+
+
                 $_SESSION["success"] =
                     "Task added successfully.";
 
@@ -160,6 +180,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = "Database error.";
 
         }
+
+    }
+
+
+    /* =====================================================
+       AJAX ERROR RESPONSE
+       (SUCCESS PATH ALREADY EXITED ABOVE)
+    ===================================================== */
+
+    if ($is_ajax) {
+
+        header("Content-Type: application/json");
+
+        echo json_encode([
+            "success" => false,
+            "message" => $error !== "" ? $error : "Failed to add task."
+        ]);
+
+        exit();
 
     }
 
@@ -434,4 +473,3 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </body>
 
 </html>
-

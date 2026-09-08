@@ -1,3 +1,4 @@
+
 /* =========================================================
    TODO APP - MODERN BLUE UI
 ========================================================= */
@@ -515,6 +516,52 @@ tbody tr:hover {
 }
 
 /* =========================================================
+   ADMIN COLUMN PLUS BUTTON
+========================================================= */
+
+.column-add-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+
+    border: 1px solid #d6deea;
+    border-radius: 50%;
+
+    background: #ffffff;
+    color: #1473e6;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+
+    margin-left: auto;
+
+    text-decoration: none;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.column-add-btn:hover {
+    background: #1473e6;
+    color: #ffffff;
+    border-color: #1473e6;
+
+    transform: scale(1.08);
+}
+
+.column-add-btn:active {
+    transform: scale(0.96);
+}
+
+/* =========================================================
    FOOTER
 ========================================================= */
 
@@ -595,6 +642,13 @@ tbody tr:hover {
         white-space: nowrap;
     }
 
+    .column-add-btn {
+        width: 27px;
+        height: 27px;
+        min-width: 27px;
+        font-size: 16px;
+    }
+
 }
 
 @media (max-width: 480px) {
@@ -614,6 +668,238 @@ tbody tr:hover {
     .btn {
         font-size: 13px;
         padding: 0 13px;
+    }
+
+    .column-add-btn {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        font-size: 15px;
+    }
+
+}
+
+
+/* =========================================================
+   TASK BOARD - COLUMN ONLY SCROLL
+   ONLY TASK LISTS SCROLL
+========================================================= */
+
+/*
+   IMPORTANT:
+   Do NOT use overflow:hidden on body here.
+   Other pages such as login/auth pages should continue
+   working normally.
+*/
+
+html,
+body {
+    height: 100%;
+}
+
+/*
+   Your index.php uses .board-wrapper.
+   Keep horizontal scrolling available.
+   Vertical page scrolling is disabled only for the board area.
+*/
+
+.board-wrapper {
+    width: 100%;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding-bottom: 15px;
+
+    /*
+       Allows the board to occupy the available screen.
+    */
+    min-height: 0;
+}
+
+/*
+   Your index.php uses .task-board.
+*/
+.task-board {
+    min-height: 0;
+
+    display: grid;
+
+    /*
+       Keep your existing four-column layout.
+    */
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(260px, 1fr)
+        );
+
+    gap: 18px;
+
+    min-width: 1050px;
+
+    /*
+       Important for column scrolling.
+    */
+    height: 100%;
+}
+
+/*
+   Individual task column.
+*/
+.task-column {
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+/*
+   Column header must remain fixed.
+*/
+.task-column .column-header {
+    flex: 0 0 auto;
+}
+
+/*
+   ONLY THIS AREA SCROLLS.
+*/
+.task-list {
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /*
+       Small spacing for scrollbar.
+    */
+    padding-right: 5px;
+
+    /*
+       Firefox.
+    */
+    scrollbar-width: thin;
+    scrollbar-color:
+        #cbd3df
+        transparent;
+}
+
+/*
+   Chrome / Edge / Safari scrollbar.
+*/
+.task-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+.task-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.task-list::-webkit-scrollbar-thumb {
+    background: #cbd3df;
+    border-radius: 10px;
+}
+
+.task-list::-webkit-scrollbar-thumb:hover {
+    background: #aeb8c7;
+}
+
+/*
+   Task cards should keep their normal size.
+*/
+.task-list > .task-card {
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   FIXED TASK BOARD SCREEN AREA
+========================================================= */
+
+/*
+   This class is optional.
+   If your index.php does not use it, it does nothing.
+*/
+.task-board-page {
+    height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   MOBILE BOARD
+========================================================= */
+
+@media (max-width: 768px) {
+
+    /*
+       Keep the board horizontally scrollable.
+    */
+    .board-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    /*
+       Keep all four columns horizontally available.
+    */
+    .task-board {
+        min-width: 1050px;
+
+        height: 100%;
+    }
+
+    /*
+       Each column remains fixed.
+    */
+    .task-column {
+        min-height: 0;
+
+        display: flex;
+        flex-direction: column;
+
+        overflow: hidden;
+    }
+
+    /*
+       Only the task list scrolls vertically.
+    */
+    .task-list {
+        min-height: 0;
+
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+}
+
+
+/* =========================================================
+   VERY SMALL SCREENS
+========================================================= */
+
+@media (max-width: 480px) {
+
+    .board-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .task-board {
+        min-width: 1050px;
+    }
+
+    .task-list {
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
 }

@@ -296,7 +296,7 @@ function formatTaskDate($date)
 
 
     return date(
-        "d M Y, h:i A",
+        "d M Y, h:i:s A",
         $timestamp
     );
 
@@ -385,782 +385,1301 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <title>Task Board - TODO APP</title>
-
-
-    <!-- Bootstrap -->
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+<title>Task Board - TODO APP</title>
 
 
-    <!-- Bootstrap Icons -->
+<!-- Bootstrap -->
 
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-    >
-
-
-    <!-- Existing Style -->
-
-    <link
-        rel="stylesheet"
-        href="../assets/style.css"
-    >
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+>
 
 
-    <style>
+<!-- Bootstrap Icons -->
 
-        * {
-            box-sizing: border-box;
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+>
+
+
+<!-- Existing Style -->
+
+<link
+    rel="stylesheet"
+    href="../assets/style.css"
+>
+
+
+<style>
+
+    * {
+        box-sizing: border-box;
+    }
+
+
+    body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #172b4d;
+    }
+
+
+    /* =====================================================
+       NAVBAR
+    ===================================================== */
+
+    .navbar {
+        min-height: 61px;
+    }
+
+
+    .navbar-brand {
+        font-weight: 800;
+        font-size: 25px;
+        color: #172b4d !important;
+        letter-spacing: 0.3px;
+    }
+
+
+    .navbar-brand::first-letter {
+        color: #0d6efd;
+    }
+
+
+    .welcome-text {
+        color: #52627a;
+        font-size: 14px;
+    }
+
+
+    /* =====================================================
+       USER ROLE BADGE
+    ===================================================== */
+
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 65px;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 20px;
+        background: #e8f1ff;
+        color: #1261b5;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: capitalize;
+    }
+
+
+    .logout-btn {
+        background: #fff0f1;
+        color: #dc3545;
+        border: none;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 10px;
+    }
+
+
+    .logout-btn:hover {
+        background: #ffe0e3;
+        color: #dc3545;
+    }
+
+
+    /* =====================================================
+       MAIN
+    ===================================================== */
+
+    .main-container {
+        padding-top: 30px;
+    }
+
+
+    .board-heading {
+        font-size: 23px;
+        font-weight: 800;
+        color: #172b4d;
+        margin-bottom: 5px;
+    }
+
+
+    .board-subtitle {
+        font-size: 13px;
+        color: #61708a;
+    }
+
+
+    /* =====================================================
+       TOP TOOLBAR
+    ===================================================== */
+
+    .board-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+
+    .board-title-area {
+        flex: 1;
+    }
+
+
+    .board-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+
+    /* =====================================================
+       SEARCH
+    ===================================================== */
+
+    .search-box {
+        position: relative;
+        width: 500px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+
+    .search-input-wrapper {
+        position: relative;
+        flex: 1;
+    }
+
+
+    .search-box input {
+        height: 48px;
+        width: 100%;
+        border: 1px solid #d6deea;
+        border-radius: 8px;
+        padding-left: 45px;
+        padding-right: 15px;
+        font-size: 14px;
+        color: #172b4d;
+        background: #ffffff;
+    }
+
+
+    .search-box input:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+        outline: none;
+    }
+
+
+    .search-icon {
+        position: absolute;
+        left: 17px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 17px;
+        z-index: 2;
+        color: #5f6f87;
+    }
+
+
+    .search-btn,
+    .clear-search-btn {
+        height: 48px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        padding: 0 17px;
+        white-space: nowrap;
+    }
+
+
+    .search-btn {
+        background: #1473e6;
+        border-color: #1473e6;
+    }
+
+
+    .search-btn:hover {
+        background: #0967d5;
+        border-color: #0967d5;
+    }
+
+
+    .clear-search-btn {
+        background: #ffffff;
+        border: 1px solid #d6deea;
+        color: #52627a;
+    }
+
+
+    .clear-search-btn:hover {
+        background: #f1f3f5;
+        border-color: #c5cedb;
+        color: #172b4d;
+    }
+
+
+    .task-filter {
+        width: 163px;
+    }
+
+
+    .task-filter select {
+        height: 48px;
+        border: 1px solid #d6deea;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #172b4d;
+        background-color: #ffffff;
+        padding-left: 17px;
+    }
+
+
+    .task-filter select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+    }
+
+
+    .add-task-btn {
+        height: 48px;
+        padding: 0 20px;
+        border-radius: 8px;
+        font-weight: 700;
+        background: #1473e6;
+        border-color: #1473e6;
+    }
+
+
+    .add-task-btn:hover {
+        background: #0967d5;
+        border-color: #0967d5;
+    }
+
+
+    /* =====================================================
+       BOARD
+    ===================================================== */
+
+    .board-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 15px;
+    }
+
+
+    .task-board {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(260px, 1fr));
+        gap: 18px;
+        min-width: 1050px;
+    }
+
+
+    /* =====================================================
+       COLUMNS
+    ===================================================== */
+
+    .task-column {
+        border-radius: 9px;
+        padding: 12px;
+        height: calc(100vh - 265px);
+        display: flex;
+        flex-direction: column;
+        transition: 0.2s;
+        border: 1px solid #dbe2ec;
+    }
+
+
+    .task-column:nth-child(1) {
+        background: #eef3f9;
+    }
+
+
+    .task-column:nth-child(2) {
+        background: #eef4fb;
+    }
+
+
+    .task-column:nth-child(3) {
+        background: #fff8e9;
+    }
+
+
+    .task-column:nth-child(4) {
+        background: #eef9f2;
+    }
+
+
+    .task-column.drag-over {
+        box-shadow: inset 0 0 0 2px #0d6efd;
+    }
+
+
+    .column-header {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 13px;
+        padding: 7px 5px;
+        flex-shrink: 0;
+    }
+
+
+    .column-title {
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.2px;
+    }
+
+
+    .task-column:nth-child(1) .column-title {
+        color: #172b4d;
+    }
+
+
+    .task-column:nth-child(2) .column-title {
+        color: #1261b5;
+    }
+
+
+    .task-column:nth-child(3) .column-title {
+        color: #9b6900;
+    }
+
+
+    .task-column:nth-child(4) .column-title {
+        color: #098443;
+    }
+
+
+    .column-count {
+        font-size: 14px;
+        color: #61708a;
+        font-weight: 500;
+    }
+
+
+    /* =====================================================
+       ADMIN COLUMN PLUS BUTTON
+    ===================================================== */
+
+    .column-add-btn {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border: 1px solid #d6deea;
+        border-radius: 50%;
+        background: #ffffff;
+        color: #1473e6;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        font-weight: 700;
+        line-height: 1;
+        text-decoration: none;
+        margin-left: auto;
+        transition:
+            background 0.2s ease,
+            color 0.2s ease,
+            border-color 0.2s ease,
+            transform 0.2s ease;
+    }
+
+
+    .column-add-btn:hover {
+        background: #1473e6;
+        color: #ffffff;
+        border-color: #1473e6;
+        transform: scale(1.08);
+    }
+
+
+    .column-add-btn:active {
+        transform: scale(0.96);
+    }
+
+
+    .task-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 4px;
+    }
+
+
+    /* =====================================================
+       TASK CARD
+    ===================================================== */
+
+    .task-card {
+        position: relative;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        cursor: grab;
+        touch-action: pan-y;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        border: 1px solid #dbe1e9;
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            opacity 0.2s ease;
+    }
+
+
+    .task-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 13px rgba(0,0,0,0.10);
+    }
+
+
+    .task-card:active {
+        cursor: grabbing;
+    }
+
+
+    .task-card.dragging {
+        opacity: 0.45;
+        transform: rotate(2deg);
+    }
+
+
+    .task-card.touch-dragging {
+        opacity: 0.85;
+        transform: scale(1.03);
+        z-index: 9999;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.22);
+    }
+
+
+    .task-card.touch-source {
+        opacity: 0.35;
+    }
+
+
+    .task-card.touch-ready {
+        box-shadow: 0 0 0 2px #0d6efd;
+    }
+
+
+    /* =====================================================
+       PRIORITY LEFT BORDER
+    ===================================================== */
+
+    .priority-high {
+        border-left: 4px solid #dc3545;
+    }
+
+
+    .priority-medium {
+        border-left: 4px solid #ffb900;
+    }
+
+
+    .priority-low {
+        border-left: 4px solid #22a866;
+    }
+
+
+    /* =====================================================
+       TASK CONTENT
+    ===================================================== */
+
+    .task-title {
+        font-weight: 800;
+        font-size: 14px;
+        color: #172b4d;
+        padding-right: 28px;
+        word-break: break-word;
+        line-height: 1.4;
+    }
+
+
+    .task-description {
+        font-size: 13px;
+        color: #52627a;
+        margin-top: 5px;
+        word-break: break-word;
+        line-height: 1.4;
+    }
+
+
+    .task-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 12px;
+    }
+
+
+    .priority-badge,
+    .progress-badge,
+    .completion-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 9px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+
+    .priority-badge {
+        background: #d7f5e7;
+        color: #087944;
+    }
+
+
+    .priority-high .priority-badge {
+        background: #f8d7da;
+        color: #a61e2b;
+    }
+
+
+    .priority-medium .priority-badge {
+        background: #fff0b8;
+        color: #8a6200;
+    }
+
+
+    .priority-low .priority-badge {
+        background: #d7f5e7;
+        color: #087944;
+    }
+
+
+    .priority-badge i {
+        display: none;
+    }
+
+
+    /* =====================================================
+       PROGRESS BADGES
+    ===================================================== */
+
+    .progress-todo {
+        background: #6c757d;
+        color: #ffffff;
+    }
+
+
+    .progress-progress {
+        background: #1473e6;
+        color: #ffffff;
+    }
+
+
+    .progress-review {
+        background: #f1c400;
+        color: #1e1e1e;
+    }
+
+
+    .progress-done {
+        background: #098443;
+        color: #ffffff;
+    }
+
+
+    /* =====================================================
+       COMPLETION BADGES
+    ===================================================== */
+
+    .completion-badge.completed {
+        background: #d6eadd;
+        color: #246044;
+    }
+
+
+    .completion-badge.incomplete {
+        background: #f8d7da;
+        color: #a42835;
+    }
+
+
+    .completion-badge i {
+        margin-right: 4px;
+    }
+
+
+    /* =====================================================
+       DATE
+    ===================================================== */
+
+    .task-date {
+        font-size: 11px;
+        color: #65748b;
+        margin-top: 12px;
+    }
+
+
+    .task-date i {
+        margin-right: 3px;
+    }
+
+
+    /* =====================================================
+       THREE DOT MENU
+    ===================================================== */
+
+    .task-menu {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+
+
+    .task-menu-button {
+        border: 0;
+        background: transparent;
+        color: #6a7a91;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-size: 19px;
+        line-height: 1;
+    }
+
+
+    .task-menu-button:hover {
+        background: #f1f3f5;
+        color: #172b4d;
+    }
+
+
+    .task-menu-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 31px;
+        min-width: 130px;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        padding: 5px;
+        z-index: 10000;
+        border: 1px solid #e1e6ed;
+    }
+
+
+    .task-menu-content.show {
+        display: block;
+    }
+
+
+    .task-menu-content a {
+        display: block;
+        text-decoration: none;
+        padding: 8px 10px;
+        color: #212529;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+
+
+    .task-menu-content a:hover {
+        background: #f1f3f5;
+    }
+
+
+    .task-menu-content .delete-link {
+        color: #dc3545;
+    }
+
+
+    /* =====================================================
+       TASK DETAILS MODAL
+    ===================================================== */
+
+    .task-details-modal .modal-dialog {
+        max-width: 760px;
+    }
+
+
+    .task-details-modal .modal-content {
+        border: none;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.20);
+    }
+
+
+    .task-details-modal .modal-header {
+        padding: 18px 22px;
+        background: #ffffff;
+        border-bottom: 1px solid #e8edf3;
+    }
+
+
+    .task-details-modal .modal-title {
+        font-size: 19px;
+        font-weight: 800;
+        color: #172b4d;
+    }
+
+
+    .task-details-modal .modal-header .btn-close {
+        margin: 0;
+        padding: 8px;
+    }
+
+
+    .task-details-modal .modal-body {
+        padding: 22px;
+        background: #ffffff;
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+
+
+    .task-detail-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #172b4d;
+        margin-bottom: 8px;
+        word-break: break-word;
+    }
+
+
+    .task-detail-description {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #52627a;
+        background: #f7f9fc;
+        border: 1px solid #e5eaf1;
+        border-radius: 9px;
+        padding: 13px 14px;
+        margin-bottom: 20px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+
+    .task-detail-description.empty {
+        color: #8a96a8;
+        font-style: italic;
+    }
+
+
+    .task-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+
+    .task-detail-item {
+        border: 1px solid #e2e7ee;
+        background: #ffffff;
+        border-radius: 9px;
+        padding: 13px 14px;
+        min-width: 0;
+    }
+
+
+    .task-detail-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 6px;
+    }
+
+
+    .task-detail-value {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        color: #172b4d;
+        word-break: break-word;
+    }
+
+
+    .task-detail-value.status-active {
+        color: #198754;
+    }
+
+
+    .task-detail-value.status-inactive {
+        color: #dc3545;
+    }
+
+
+    .task-detail-value.complete {
+        color: #198754;
+    }
+
+
+    .task-detail-value.incomplete {
+        color: #dc3545;
+    }
+
+
+    /* =====================================================
+       COMMENTS
+    ===================================================== */
+
+    .task-comments-section h6,
+    .task-attachments-section h6 {
+        color: #172b4d;
+        font-size: 15px;
+    }
+
+
+    .task-comments-list {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 3px;
+    }
+
+
+    .task-comment-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #f8fafc;
+    }
+
+
+    .task-comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+    }
+
+
+    .task-comment-user {
+        font-weight: 600;
+        font-size: 14px;
+        color: #172b4d;
+    }
+
+
+    .task-comment-date {
+        color: #6b7280;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+
+    .task-comment-text {
+        font-size: 14px;
+        color: #52627a;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+
+    #taskCommentInput {
+        resize: vertical;
+        border: 1px solid #d6deea;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+
+    #taskCommentInput:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+    }
+
+
+    #addCommentButton {
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+
+    /* =====================================================
+       ATTACHMENTS
+    ===================================================== */
+
+    .task-attachments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+
+    .task-attachment-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+    }
+
+
+    .task-attachment-preview {
+        display: block;
+        width: 100%;
+        max-height: 220px;
+        object-fit: contain;
+        border-radius: 8px;
+        background: #f8fafc;
+        margin-bottom: 8px;
+    }
+
+
+    .task-attachment-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+
+    .task-attachment-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #172b4d;
+        word-break: break-word;
+    }
+
+
+    .task-attachment-date {
+        color: #6b7280;
+        font-size: 11px;
+        margin-top: 2px;
+    }
+
+
+    .task-attachment-actions {
+        display: flex;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+
+
+    .task-attachment-actions a,
+    .task-attachment-actions button {
+        border: 0;
+        background: transparent;
+        padding: 5px 8px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: #52627a;
+    }
+
+
+    .task-attachment-actions a:hover,
+    .task-attachment-actions button:hover {
+        background: #f1f5f9;
+    }
+
+
+    .attachment-file-icon {
+        width: 55px;
+        height: 55px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+    }
+
+
+    .attachment-file-icon i {
+        font-size: 28px;
+        color: #1473e6;
+    }
+
+
+    /* =====================================================
+       MODAL FOOTER
+    ===================================================== */
+
+    .task-details-modal .modal-footer {
+        padding: 14px 22px;
+        border-top: 1px solid #e8edf3;
+        background: #ffffff;
+    }
+
+
+    .task-details-close-btn {
+        min-width: 90px;
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+
+    /* =====================================================
+       DRAG MESSAGES
+    ===================================================== */
+
+    .drag-hint {
+        position: fixed;
+        left: 50%;
+        bottom: 25px;
+        transform: translateX(-50%);
+        background: #212529;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 30px;
+        font-size: 13px;
+        z-index: 20000;
+        display: none;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+
+    .drag-success {
+        position: fixed;
+        left: 50%;
+        bottom: 25px;
+        transform: translateX(-50%);
+        background: #198754;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 30px;
+        font-size: 13px;
+        z-index: 20000;
+        display: none;
+    }
+
+
+    .drop-indicator {
+        height: 5px;
+        border-radius: 5px;
+        background: #0d6efd;
+        margin: 5px 0 10px;
+        display: none;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+
+    @media (max-width: 1250px) {
+
+        .search-box {
+            width: 430px;
         }
 
-
-        body {
-            margin: 0;
-            background: #f5f7fb;
-            color: #172b4d;
-        }
+    }
 
 
-        /* =====================================================
-           NAVBAR
-        ===================================================== */
+    @media (max-width: 1100px) {
 
-        .navbar {
-            min-height: 61px;
-        }
-
-
-        .navbar-brand {
-            font-weight: 800;
-            font-size: 25px;
-            color: #172b4d !important;
-            letter-spacing: 0.3px;
-        }
-
-
-        .navbar-brand::first-letter {
-            color: #0d6efd;
-        }
-
-
-        .welcome-text {
-            color: #52627a;
-            font-size: 14px;
-        }
-
-
-        /* =====================================================
-           USER ROLE BADGE
-        ===================================================== */
-
-        .role-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 65px;
-            height: 32px;
-            padding: 0 12px;
-            border-radius: 20px;
-            background: #e8f1ff;
-            color: #1261b5;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: capitalize;
-        }
-
-
-        .logout-btn {
-            background: #fff0f1;
-            color: #dc3545;
-            border: none;
-            font-weight: 600;
-            padding: 10px 20px;
-            border-radius: 10px;
-        }
-
-
-        .logout-btn:hover {
-            background: #ffe0e3;
-            color: #dc3545;
-        }
-
-
-        /* =====================================================
-           MAIN
-        ===================================================== */
-
-        .main-container {
-            padding-top: 30px;
-        }
-
-
-        .board-heading {
-            font-size: 23px;
-            font-weight: 800;
-            color: #172b4d;
-            margin-bottom: 5px;
-        }
-
-
-        .board-subtitle {
-            font-size: 13px;
-            color: #61708a;
-        }
-
-
-        /* =====================================================
-           TOP TOOLBAR
-        ===================================================== */
-
-        .board-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-
-        .board-title-area {
-            flex: 1;
-        }
-
-
-        .board-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        .task-board {
+            grid-template-columns: repeat(2, minmax(280px, 1fr));
+            min-width: 0;
         }
 
 
         .search-box {
-            position: relative;
-            width: 338px;
+            width: 400px;
+        }
+
+    }
+
+
+    @media (max-width: 950px) {
+
+        .board-toolbar {
+            flex-direction: column;
+            align-items: stretch;
         }
 
 
-        .search-box input {
-            height: 48px;
-            border: 1px solid #d6deea;
-            border-radius: 8px;
-            padding-left: 45px;
-            padding-right: 15px;
-            font-size: 14px;
-            color: #172b4d;
-            background: #ffffff;
+        .board-title-area {
+            width: 100%;
         }
 
 
-        .search-box input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+        .board-controls {
+            width: 100%;
+            flex-wrap: wrap;
         }
 
 
-        .search-icon {
-            position: absolute;
-            left: 17px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 17px;
-            z-index: 2;
-            color: #5f6f87;
+        .search-box {
+            flex: 1;
+            width: auto;
+            min-width: 400px;
+        }
+
+    }
+
+
+    @media (max-width: 767px) {
+
+        .navbar-brand {
+            font-size: 21px;
+        }
+
+
+        .welcome-text {
+            display: none;
+        }
+
+
+        .main-container {
+            padding-top: 20px;
+        }
+
+
+        .board-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+
+        .board-title-area {
+            width: 100%;
+        }
+
+
+        .board-controls {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+
+        .search-box {
+            width: 100%;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+        }
+
+
+        .search-input-wrapper {
+            min-width: 0;
+        }
+
+
+        .search-btn,
+        .clear-search-btn {
+            padding: 0 13px;
         }
 
 
         .task-filter {
-            width: 163px;
-        }
-
-
-        .task-filter select {
-            height: 48px;
-            border: 1px solid #d6deea;
-            border-radius: 8px;
-            font-size: 14px;
-            color: #172b4d;
-            background-color: #ffffff;
-            padding-left: 17px;
-        }
-
-
-        .task-filter select:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+            width: 100%;
         }
 
 
         .add-task-btn {
-            height: 48px;
-            padding: 0 20px;
-            border-radius: 8px;
-            font-weight: 700;
-            background: #1473e6;
-            border-color: #1473e6;
-        }
-
-
-        .add-task-btn:hover {
-            background: #0967d5;
-            border-color: #0967d5;
-        }
-
-
-        /* =====================================================
-           BOARD
-        ===================================================== */
-
-        .board-wrapper {
             width: 100%;
-            overflow-x: auto;
-            padding-bottom: 15px;
         }
 
 
         .task-board {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(260px, 1fr));
-            gap: 18px;
-            min-width: 1050px;
+            display: flex;
+            gap: 12px;
+            min-width: max-content;
         }
 
-
-        /* =====================================================
-           COLUMNS
-        ===================================================== */
 
         .task-column {
-            border-radius: 9px;
-            padding: 12px;
-            min-height: 450px;
-            transition: 0.2s;
-            border: 1px solid #dbe2ec;
+            width: 285px;
+            min-width: 285px;
         }
 
 
-        .task-column:nth-child(1) {
-            background: #eef3f9;
+        .board-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-
-        .task-column:nth-child(2) {
-            background: #eef4fb;
-        }
-
-
-        .task-column:nth-child(3) {
-            background: #fff8e9;
-        }
-
-
-        .task-column:nth-child(4) {
-            background: #eef9f2;
-        }
-
-
-        .task-column.drag-over {
-            box-shadow: inset 0 0 0 2px #0d6efd;
-        }
-
-
-        .column-header {
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            gap: 9px;
-            margin-bottom: 13px;
-            padding: 7px 5px;
-        }
-
-
-        .column-title {
-            font-weight: 800;
-            font-size: 14px;
-            letter-spacing: 0.2px;
-        }
-
-
-        .task-column:nth-child(1) .column-title {
-            color: #172b4d;
-        }
-
-
-        .task-column:nth-child(2) .column-title {
-            color: #1261b5;
-        }
-
-
-        .task-column:nth-child(3) .column-title {
-            color: #9b6900;
-        }
-
-
-        .task-column:nth-child(4) .column-title {
-            color: #098443;
-        }
-
-
-        .column-count {
-            font-size: 14px;
-            color: #61708a;
-            font-weight: 500;
-        }
-
-
-        .task-list {
-            min-height: 390px;
-        }
-
-
-        /* =====================================================
-           TASK CARD
-        ===================================================== */
 
         .task-card {
-            position: relative;
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            cursor: grab;
-            touch-action: pan-y;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-            border: 1px solid #dbe1e9;
-            transition:
-                transform 0.2s ease,
-                box-shadow 0.2s ease,
-                opacity 0.2s ease;
+            padding: 14px;
         }
 
 
-        .task-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 13px rgba(0,0,0,0.10);
+        .task-details-modal .modal-dialog {
+            margin: 10px;
         }
 
 
-        .task-card:active {
-            cursor: grabbing;
+        .task-details-modal .modal-body {
+            padding: 17px;
         }
 
 
-        .task-card.dragging {
-            opacity: 0.45;
-            transform: rotate(2deg);
+        .task-detail-grid {
+            grid-template-columns: 1fr;
         }
 
 
-        .task-card.touch-dragging {
-            opacity: 0.85;
-            transform: scale(1.03);
-            z-index: 9999;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.22);
+        .task-comment-header {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 3px;
         }
 
 
-        .task-card.touch-source {
-            opacity: 0.35;
+        .task-attachment-info {
+            align-items: flex-start;
+            flex-direction: column;
         }
 
 
-        .task-card.touch-ready {
-            box-shadow: 0 0 0 2px #0d6efd;
+        .task-attachment-actions {
+            width: 100%;
+        }
+
+    }
+
+
+    @media (max-width: 500px) {
+
+        .search-box {
+            grid-template-columns: 1fr;
         }
 
 
-        /* =====================================================
-           PRIORITY LEFT BORDER
-        ===================================================== */
-
-        .priority-high {
-            border-left: 4px solid #dc3545;
+        .search-btn,
+        .clear-search-btn {
+            width: 100%;
         }
 
+    }
 
-        .priority-medium {
-            border-left: 4px solid #ffb900;
+
+    @media (max-width: 380px) {
+
+        .task-column {
+            width: 270px;
+            min-width: 270px;
         }
 
+    }
 
-        .priority-low {
-            border-left: 4px solid #22a866;
-        }
-
-
-        /* =====================================================
-           TASK CONTENT
-        ===================================================== */
-
-        .task-title {
-            font-weight: 800;
-            font-size: 14px;
-            color: #172b4d;
-            padding-right: 28px;
-            word-break: break-word;
-            line-height: 1.4;
-        }
-
-
-        .task-description {
-            font-size: 13px;
-            color: #52627a;
-            margin-top: 5px;
-            word-break: break-word;
-            line-height: 1.4;
-        }
-
-
-        .task-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 12px;
-        }
-
-
-        .priority-badge,
-        .progress-badge,
-        .completion-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 9px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1;
-        }
-
-
-        .priority-badge {
-            background: #d7f5e7;
-            color: #087944;
-        }
-
-
-        .priority-high .priority-badge {
-            background: #f8d7da;
-            color: #a61e2b;
-        }
-
-
-        .priority-medium .priority-badge {
-            background: #fff0b8;
-            color: #8a6200;
-        }
-
-
-        .priority-low .priority-badge {
-            background: #d7f5e7;
-            color: #087944;
-        }
-
-
-        .priority-badge i {
-            display: none;
-        }
-
-
-        /* =====================================================
-           PROGRESS BADGES
-        ===================================================== */
-
-        .progress-todo {
-            background: #6c757d;
-            color: #ffffff;
-        }
-
-
-        .progress-progress {
-            background: #1473e6;
-            color: #ffffff;
-        }
-
-
-        .progress-review {
-            background: #f1c400;
-            color: #1e1e1e;
-        }
-
-
-        .progress-done {
-            background: #098443;
-            color: #ffffff;
-        }
-
-
-        /* =====================================================
-           COMPLETION BADGES
-        ===================================================== */
-
-        .completion-badge.completed {
-            background: #d6eadd;
-            color: #246044;
-        }
-
-
-        .completion-badge.incomplete {
-            background: #f8d7da;
-            color: #a42835;
-        }
-
-
-        .completion-badge i {
-            margin-right: 4px;
-        }
-
-
-        /* =====================================================
-           DATE
-        ===================================================== */
-
-        .task-date {
-            font-size: 11px;
-            color: #65748b;
-            margin-top: 12px;
-        }
-
-
-        .task-date i {
-            margin-right: 3px;
-        }
-
-
-        /* =====================================================
-           THREE DOT MENU
-        ===================================================== */
-
-        .task-menu {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-
-
-        .task-menu-button {
-            border: 0;
-            background: transparent;
-            color: #6a7a91;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            font-size: 19px;
-            line-height: 1;
-        }
-
-
-        .task-menu-button:hover {
-            background: #f1f3f5;
-            color: #172b4d;
-        }
-
-
-        .task-menu-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 31px;
-            min-width: 130px;
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            padding: 5px;
-            z-index: 10000;
-            border: 1px solid #e1e6ed;
-        }
-
-
-        .task-menu-content.show {
-            display: block;
-        }
-
-
-        .task-menu-content a {
-            display: block;
-            text-decoration: none;
-            padding: 8px 10px;
-            color: #212529;
-            font-size: 13px;
-            border-radius: 6px;
-        }
-
-
-        .task-menu-content a:hover {
-            background: #f1f3f5;
-        }
-
-
-        .task-menu-content .delete-link {
-            color: #dc3545;
-        }
-
-
-        /* =====================================================
-           DRAG MESSAGES
-        ===================================================== */
-
-        .drag-hint {
-            position: fixed;
-            left: 50%;
-            bottom: 25px;
-            transform: translateX(-50%);
-            background: #212529;
-            color: #ffffff;
-            padding: 10px 18px;
-            border-radius: 30px;
-            font-size: 13px;
-            z-index: 20000;
-            display: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        }
-
-
-        .drag-success {
-            position: fixed;
-            left: 50%;
-            bottom: 25px;
-            transform: translateX(-50%);
-            background: #198754;
-            color: #ffffff;
-            padding: 10px 18px;
-            border-radius: 30px;
-            font-size: 13px;
-            z-index: 20000;
-            display: none;
-        }
-
-
-        .drop-indicator {
-            height: 5px;
-            border-radius: 5px;
-            background: #0d6efd;
-            margin: 5px 0 10px;
-            display: none;
-        }
-
-
-        /* =====================================================
-           RESPONSIVE
-        ===================================================== */
-
-        @media (max-width: 1100px) {
-
-            .task-board {
-                grid-template-columns: repeat(2, minmax(280px, 1fr));
-                min-width: 0;
-            }
-
-
-            .search-box {
-                width: 280px;
-            }
-
-        }
-
-
-        @media (max-width: 767px) {
-
-            .navbar-brand {
-                font-size: 21px;
-            }
-
-
-            .welcome-text {
-                display: none;
-            }
-
-
-            .main-container {
-                padding-top: 20px;
-            }
-
-
-            .board-toolbar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-
-            .board-title-area {
-                width: 100%;
-            }
-
-
-            .board-controls {
-                width: 100%;
-                display: grid;
-                grid-template-columns: 1fr;
-            }
-
-
-            .search-box {
-                width: 100%;
-            }
-
-
-            .task-filter {
-                width: 100%;
-            }
-
-
-            .add-task-btn {
-                width: 100%;
-            }
-
-
-            .task-board {
-                display: flex;
-                gap: 12px;
-                min-width: max-content;
-            }
-
-
-            .task-column {
-                width: 285px;
-                min-width: 285px;
-            }
-
-
-            .board-wrapper {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-
-            .task-card {
-                padding: 14px;
-            }
-
-        }
-
-
-        @media (max-width: 380px) {
-
-            .task-column {
-                width: 270px;
-                min-width: 270px;
-            }
-
-        }
-
-    </style>
+</style>
 
 </head>
 
-
 <body>
-
 
 <!-- =========================================================
      NAVBAR
@@ -1168,48 +1687,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <nav class="navbar navbar-expand-lg bg-white border-bottom">
 
-    <div class="container-fluid px-3 px-md-4">
+<div class="container-fluid px-3 px-md-4">
+
+    <a
+        class="navbar-brand"
+        href="index.php"
+    >
+        ☑ TODO APP
+    </a>
+
+
+    <div class="d-flex align-items-center">
+
+        <span class="welcome-text me-3">
+
+            Welcome,
+
+            <strong>
+                <?= htmlspecialchars($_SESSION["user_name"] ?? "User") ?>
+            </strong>
+
+        </span>
+
+
+        <span class="role-badge me-3">
+
+            <?= htmlspecialchars($display_role) ?>
+
+        </span>
+
 
         <a
-            class="navbar-brand"
-            href="index.php"
+            href="../auth/logout.php"
+            class="btn logout-btn"
         >
-            ☑ TODO APP
+            Logout
         </a>
 
-
-        <div class="d-flex align-items-center">
-
-            <span class="welcome-text me-3">
-
-                Welcome,
-
-                <strong>
-                    <?= htmlspecialchars($_SESSION["user_name"] ?? "User") ?>
-                </strong>
-
-            </span>
-
-
-            <!-- USER ROLE -->
-
-            <span class="role-badge me-3">
-
-                <?= htmlspecialchars($display_role) ?>
-
-            </span>
-
-
-            <a
-                href="../auth/logout.php"
-                class="btn logout-btn"
-            >
-                Logout
-            </a>
-
-        </div>
-
     </div>
+
+</div>
 
 </nav>
 
@@ -1221,40 +1738,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <div class="container-fluid px-3 px-md-4 main-container">
 
 
-    <!-- =====================================================
-         HEADER + CONTROLS
-    ====================================================== -->
-
-    <div class="board-toolbar">
+<div class="board-toolbar">
 
 
-        <!-- TITLE -->
+    <div class="board-title-area">
 
-        <div class="board-title-area">
-
-            <div class="board-heading">
-                Task Board
-            </div>
-
-
-            <div class="board-subtitle">
-                Drag and drop tasks between columns to update status
-            </div>
-
+        <div class="board-heading">
+            Task Board
         </div>
 
 
-        <!-- CONTROLS -->
+        <div class="board-subtitle">
+            Drag and drop tasks between columns to update status
+        </div>
 
-        <div class="board-controls">
+    </div>
 
 
-            <!-- SEARCH -->
+    <div class="board-controls">
 
-            <form
-                method="GET"
-                class="search-box"
-            >
+
+        <form
+            method="GET"
+            class="search-box"
+        >
+
+            <div class="search-input-wrapper">
 
                 <i class="bi bi-search search-icon"></i>
 
@@ -1274,800 +1783,1549 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     value="<?= htmlspecialchars($progress_filter) ?>"
                 >
 
-            </form>
+            </div>
 
 
-            <!-- ALL TASKS -->
+            <button
+                type="submit"
+                class="btn btn-primary search-btn"
+            >
+                <i class="bi bi-search"></i>
+                Search
+            </button>
 
-            <div class="task-filter">
 
-                <form
-                    method="GET"
-                    id="progressFilterForm"
+            <a
+                href="?progress=<?= urlencode($progress_filter) ?>"
+                class="btn clear-search-btn"
+            >
+                <i class="bi bi-x-lg"></i>
+                Clear
+            </a>
+
+        </form>
+
+
+        <div class="task-filter">
+
+            <form
+                method="GET"
+                id="progressFilterForm"
+            >
+
+                <input
+                    type="hidden"
+                    name="search"
+                    value="<?= htmlspecialchars($search) ?>"
                 >
 
-                    <input
-                        type="hidden"
-                        name="search"
-                        value="<?= htmlspecialchars($search) ?>"
+
+                <select
+                    name="progress"
+                    class="form-select"
+                    onchange="document.getElementById('progressFilterForm').submit();"
+                >
+
+                    <option
+                        value="all"
+                        <?= $progress_filter === "all" ? "selected" : "" ?>
+                    >
+                        All Tasks
+                    </option>
+
+
+                    <option
+                        value="Todo"
+                        <?= $progress_filter === "Todo" ? "selected" : "" ?>
+                    >
+                        TODO
+                    </option>
+
+
+                    <option
+                        value="In Progress"
+                        <?= $progress_filter === "In Progress" ? "selected" : "" ?>
+                    >
+                        IN PROGRESS
+                    </option>
+
+
+                    <option
+                        value="Review"
+                        <?= $progress_filter === "Review" ? "selected" : "" ?>
+                    >
+                        REVIEW
+                    </option>
+
+
+                    <option
+                        value="Done"
+                        <?= $progress_filter === "Done" ? "selected" : "" ?>
+                    >
+                        DONE
+                    </option>
+
+                </select>
+
+            </form>
+
+        </div>
+
+
+        <?php if ($is_admin || $is_user): ?>
+
+            <a
+                href="add.php"
+                class="btn btn-primary add-task-btn"
+            >
+
+                + Add Board
+
+            </a>
+
+        <?php endif; ?>
+
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BOARD
+========================================================= -->
+
+<div class="board-wrapper">
+
+<div class="task-board">
+
+
+<!-- =========================================================
+     TODO
+========================================================= -->
+
+<div
+    class="task-column"
+    data-progress="Todo"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">
+            TODO
+        </span>
+
+
+        <span class="column-count">
+            <?= count($todo_tasks) ?>
+        </span>
+
+
+        <?php if ($is_admin): ?>
+
+            <a
+                href="add.php?progress=Todo"
+                class="column-add-btn"
+                title="Add task to TODO"
+                aria-label="Add task to TODO"
+            >
+                <i class="bi bi-plus"></i>
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="task-list">
+
+        <?php foreach ($todo_tasks as $task): ?>
+
+            <div
+                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
+                draggable="true"
+                data-task-id="<?= (int)$task["id"] ?>"
+                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
+                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+            >
+
+
+                <div class="task-title">
+
+                    <?= htmlspecialchars($task["task"]) ?>
+
+                </div>
+
+
+                <?php if (!empty($task["description"])): ?>
+
+                    <div class="task-description">
+
+                        <?= nl2br(htmlspecialchars($task["description"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-meta">
+
+                    <span class="priority-badge">
+                        <?= htmlspecialchars($task["priority"]) ?>
+                    </span>
+
+
+                    <span
+                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
+                    >
+                        <?= htmlspecialchars($task["progress"]) ?>
+                    </span>
+
+
+                    <?php if ((int)$task["is_completed"] === 1): ?>
+
+                        <span class="completion-badge completed">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                            Completed
+
+                        </span>
+
+                    <?php else: ?>
+
+                        <span class="completion-badge incomplete">
+
+                            <i class="bi bi-circle"></i>
+
+                            Incomplete
+
+                        </span>
+
+                    <?php endif; ?>
+
+                </div>
+
+
+                <?php if (!empty($task["editedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
+
+                    </div>
+
+                <?php elseif (!empty($task["addedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-menu">
+
+                    <button
+                        type="button"
+                        class="task-menu-button"
+                        aria-label="Task menu"
+                    >
+                        ⋮
+                    </button>
+
+
+                    <div class="task-menu-content">
+
+                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+                            View
+                        </a>
+
+
+                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
+                            Edit
+                        </a>
+
+
+                        <?php if ($is_admin): ?>
+
+                            <a
+                                href="delete.php?id=<?= (int)$task["id"] ?>"
+                                class="delete-link"
+                                onclick="return confirm('Are you sure you want to delete this task?');"
+                            >
+                                Delete
+                            </a>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        <?php endforeach; ?>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     IN PROGRESS
+========================================================= -->
+
+<div
+    class="task-column"
+    data-progress="In Progress"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">
+            IN PROGRESS
+        </span>
+
+
+        <span class="column-count">
+            <?= count($in_progress_tasks) ?>
+        </span>
+
+
+        <?php if ($is_admin): ?>
+
+            <a
+                href="add.php?progress=In%20Progress"
+                class="column-add-btn"
+                title="Add task to IN PROGRESS"
+                aria-label="Add task to IN PROGRESS"
+            >
+                <i class="bi bi-plus"></i>
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="task-list">
+
+        <?php foreach ($in_progress_tasks as $task): ?>
+
+            <div
+                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
+                draggable="true"
+                data-task-id="<?= (int)$task["id"] ?>"
+                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
+                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+            >
+
+                <div class="task-title">
+
+                    <?= htmlspecialchars($task["task"]) ?>
+
+                </div>
+
+
+                <?php if (!empty($task["description"])): ?>
+
+                    <div class="task-description">
+
+                        <?= nl2br(htmlspecialchars($task["description"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-meta">
+
+                    <span class="priority-badge">
+
+                        <?= htmlspecialchars($task["priority"]) ?>
+
+                    </span>
+
+
+                    <span
+                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
                     >
 
+                        <?= htmlspecialchars($task["progress"]) ?>
+
+                    </span>
+
+
+                    <?php if ((int)$task["is_completed"] === 1): ?>
+
+                        <span class="completion-badge completed">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                            Completed
+
+                        </span>
+
+                    <?php else: ?>
+
+                        <span class="completion-badge incomplete">
+
+                            <i class="bi bi-circle"></i>
+
+                            Incomplete
+
+                        </span>
+
+                    <?php endif; ?>
+
+                </div>
+
+
+                <?php if (!empty($task["editedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
+
+                    </div>
+
+                <?php elseif (!empty($task["addedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-menu">
+
+                    <button
+                        type="button"
+                        class="task-menu-button"
+                        aria-label="Task menu"
+                    >
+                        ⋮
+                    </button>
+
+
+                    <div class="task-menu-content">
+
+                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+                            View
+                        </a>
+
+
+                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
+                            Edit
+                        </a>
+
+
+                        <?php if ($is_admin): ?>
+
+                            <a
+                                href="delete.php?id=<?= (int)$task["id"] ?>"
+                                class="delete-link"
+                                onclick="return confirm('Are you sure you want to delete this task?');"
+                            >
+                                Delete
+                            </a>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        <?php endforeach; ?>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     REVIEW
+========================================================= -->
+
+<div
+    class="task-column"
+    data-progress="Review"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">
+            REVIEW
+        </span>
+
+
+        <span class="column-count">
+            <?= count($review_tasks) ?>
+        </span>
+
+
+        <?php if ($is_admin): ?>
+
+            <a
+                href="add.php?progress=Review"
+                class="column-add-btn"
+                title="Add task to REVIEW"
+                aria-label="Add task to REVIEW"
+            >
+                <i class="bi bi-plus"></i>
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="task-list">
+
+        <?php foreach ($review_tasks as $task): ?>
+
+            <div
+                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
+                draggable="true"
+                data-task-id="<?= (int)$task["id"] ?>"
+                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
+                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+            >
+
+                <div class="task-title">
+
+                    <?= htmlspecialchars($task["task"]) ?>
+
+                </div>
+
+
+                <?php if (!empty($task["description"])): ?>
+
+                    <div class="task-description">
+
+                        <?= nl2br(htmlspecialchars($task["description"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-meta">
+
+                    <span class="priority-badge">
+
+                        <?= htmlspecialchars($task["priority"]) ?>
+
+                    </span>
+
+
+                    <span
+                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
+                    >
+
+                        <?= htmlspecialchars($task["progress"]) ?>
+
+                    </span>
+
+
+                    <?php if ((int)$task["is_completed"] === 1): ?>
+
+                        <span class="completion-badge completed">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                            Completed
+
+                        </span>
+
+                    <?php else: ?>
+
+                        <span class="completion-badge incomplete">
+
+                            <i class="bi bi-circle"></i>
+
+                            Incomplete
+
+                        </span>
+
+                    <?php endif; ?>
+
+                </div>
+
+
+                <?php if (!empty($task["editedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
+
+                    </div>
+
+                <?php elseif (!empty($task["addedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-menu">
+
+                    <button
+                        type="button"
+                        class="task-menu-button"
+                        aria-label="Task menu"
+                    >
+                        ⋮
+                    </button>
+
+
+                    <div class="task-menu-content">
+
+                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+                            View
+                        </a>
+
+
+                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
+                            Edit
+                        </a>
+
+
+                        <?php if ($is_admin): ?>
+
+                            <a
+                                href="delete.php?id=<?= (int)$task["id"] ?>"
+                                class="delete-link"
+                                onclick="return confirm('Are you sure you want to delete this task?');"
+                            >
+                                Delete
+                            </a>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        <?php endforeach; ?>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     DONE
+========================================================= -->
+
+<div
+    class="task-column"
+    data-progress="Done"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">
+            DONE
+        </span>
+
+
+        <span class="column-count">
+            <?= count($done_tasks) ?>
+        </span>
+
+
+        <?php if ($is_admin): ?>
+
+            <a
+                href="add.php?progress=Done"
+                class="column-add-btn"
+                title="Add task to DONE"
+                aria-label="Add task to DONE"
+            >
+                <i class="bi bi-plus"></i>
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="task-list">
+
+        <?php foreach ($done_tasks as $task): ?>
+
+            <div
+                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
+                draggable="true"
+                data-task-id="<?= (int)$task["id"] ?>"
+                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
+                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+            >
+
+                <div class="task-title">
+
+                    <?= htmlspecialchars($task["task"]) ?>
+
+                </div>
+
+
+                <?php if (!empty($task["description"])): ?>
+
+                    <div class="task-description">
+
+                        <?= nl2br(htmlspecialchars($task["description"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-meta">
+
+                    <span class="priority-badge">
+
+                        <?= htmlspecialchars($task["priority"]) ?>
+
+                    </span>
+
+
+                    <span
+                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
+                    >
+
+                        <?= htmlspecialchars($task["progress"]) ?>
+
+                    </span>
+
+
+                    <?php if ((int)$task["is_completed"] === 1): ?>
+
+                        <span class="completion-badge completed">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                            Completed
+
+                        </span>
+
+                    <?php else: ?>
+
+                        <span class="completion-badge incomplete">
+
+                            <i class="bi bi-circle"></i>
+
+                            Incomplete
+
+                        </span>
+
+                    <?php endif; ?>
+
+                </div>
+
+
+                <?php if (!empty($task["editedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
+
+                    </div>
+
+                <?php elseif (!empty($task["addedDate"])): ?>
+
+                    <div class="task-date">
+
+                        <i class="bi bi-clock"></i>
+
+                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
+                <div class="task-menu">
+
+                    <button
+                        type="button"
+                        class="task-menu-button"
+                        aria-label="Task menu"
+                    >
+                        ⋮
+                    </button>
+
+
+                    <div class="task-menu-content">
+
+                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+                            View
+                        </a>
+
+
+                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
+                            Edit
+                        </a>
+
+
+                        <?php if ($is_admin): ?>
+
+                            <a
+                                href="delete.php?id=<?= (int)$task["id"] ?>"
+                                class="delete-link"
+                                onclick="return confirm('Are you sure you want to delete this task?');"
+                            >
+                                Delete
+                            </a>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        <?php endforeach; ?>
+
+    </div>
+
+</div>
+
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- =========================================================
+     TASK DETAILS MODAL
+========================================================= -->
+
+<div
+    class="modal fade task-details-modal"
+    id="taskDetailsModal"
+    tabindex="-1"
+    aria-labelledby="taskDetailsModalLabel"
+    aria-hidden="true"
+>
+
+<div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content">
+
+
+        <!-- MODAL HEADER -->
+
+        <div class="modal-header">
+
+            <h5
+                class="modal-title"
+                id="taskDetailsModalLabel"
+            >
+                Task Details
+            </h5>
+
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+            ></button>
+
+        </div>
+
+
+        <!-- MODAL BODY -->
+
+        <div class="modal-body">
+
+
+            <!-- TASK NAME -->
+
+            <div
+                class="task-detail-title"
+                id="modalTaskTitle"
+            >
+                —
+            </div>
+
+
+            <!-- DESCRIPTION -->
+
+            <div
+                class="task-detail-description empty"
+                id="modalTaskDescription"
+            >
+                No description provided.
+            </div>
+
+
+            <!-- DETAILS -->
+
+            <div class="task-detail-grid">
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Task ID
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskId"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Priority
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskPriority"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Progress
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskProgress"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Complete
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskCompleted"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Status
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskStatus"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Added Date &amp; Time
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskAdded"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+                <div class="task-detail-item">
+
+                    <span class="task-detail-label">
+                        Edited Date &amp; Time
+                    </span>
+
+                    <span
+                        class="task-detail-value"
+                        id="modalTaskEdited"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- =================================================
+                 COMMENTS
+            ================================================== -->
+
+            <hr class="my-4">
+
+
+            <div class="task-comments-section">
+
+                <h6 class="fw-bold mb-3">
+
+                    <i class="bi bi-chat-left-text"></i>
+
+                    Comments
+
+                </h6>
+
+
+                <div
+                    id="taskCommentsList"
+                    class="task-comments-list"
+                >
+
+                    <div class="text-muted small">
+
+                        Loading comments...
+
+                    </div>
+
+                </div>
+
+
+                <div class="mt-3">
+
+                    <textarea
+                        id="taskCommentInput"
+                        class="form-control"
+                        rows="3"
+                        placeholder="Write a comment..."
+                    ></textarea>
+
+
+                    <div class="d-flex justify-content-end mt-2">
+
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            id="addCommentButton"
+                        >
+
+                            <i class="bi bi-send"></i>
+
+                            Add Comment
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 FILES / IMAGES
+            ================================================== -->
+
+            <hr class="my-4">
+
+
+            <div class="task-attachments-section">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+
+                    <h6 class="fw-bold mb-0">
+
+                        <i class="bi bi-paperclip"></i>
+
+                        Files &amp; Images
+
+                    </h6>
+
+
+                    <label
+                        for="taskAttachmentInput"
+                        class="btn btn-outline-primary btn-sm"
+                        style="cursor:pointer;"
+                    >
+
+                        <i class="bi bi-upload"></i>
+
+                        Upload
+
+                    </label>
+
+
+                    <input
+                        type="file"
+                        id="taskAttachmentInput"
+                        hidden
+                    >
+
+                </div>
+
+
+                <div
+                    id="taskAttachmentsList"
+                    class="task-attachments-list"
+                >
+
+                    <div class="text-muted small">
+
+                        Loading files...
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- MODAL FOOTER -->
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary task-details-close-btn"
+                data-bs-dismiss="modal"
+            >
+                Close
+            </button>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+</div>
+
+
+<!-- =========================================================
+     ADD TASK MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="addTaskModal"
+    tabindex="-1"
+    aria-labelledby="addTaskModalLabel"
+    aria-hidden="true"
+>
+
+<div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h5
+                class="modal-title"
+                id="addTaskModalLabel"
+            >
+                Add Task
+            </h5>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+            ></button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <div
+                id="addTaskError"
+                class="alert alert-danger d-none"
+            ></div>
+
+            <form id="addTaskForm">
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Task
+                    </label>
+
+                    <input
+                        type="text"
+                        name="task"
+                        id="addTaskTitle"
+                        class="form-control"
+                        placeholder="Enter task"
+                        maxlength="255"
+                        required
+                    >
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Task Description
+                    </label>
+
+                    <textarea
+                        name="description"
+                        id="addTaskDescription"
+                        class="form-control"
+                        rows="4"
+                        placeholder="Enter task description"
+                    ></textarea>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Priority
+                    </label>
+
+                    <select
+                        name="priority"
+                        id="addTaskPriority"
+                        class="form-select"
+                    >
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                    </select>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Task Progress
+                    </label>
 
                     <select
                         name="progress"
+                        id="addTaskProgress"
                         class="form-select"
-                        onchange="document.getElementById('progressFilterForm').submit();"
                     >
-
-                        <option
-                            value="all"
-                            <?= $progress_filter === "all" ? "selected" : "" ?>
-                        >
-                            All Tasks
-                        </option>
-
-
-                        <option
-                            value="Todo"
-                            <?= $progress_filter === "Todo" ? "selected" : "" ?>
-                        >
-                            TODO
-                        </option>
-
-
-                        <option
-                            value="In Progress"
-                            <?= $progress_filter === "In Progress" ? "selected" : "" ?>
-                        >
-                            IN PROGRESS
-                        </option>
-
-
-                        <option
-                            value="Review"
-                            <?= $progress_filter === "Review" ? "selected" : "" ?>
-                        >
-                            REVIEW
-                        </option>
-
-
-                        <option
-                            value="Done"
-                            <?= $progress_filter === "Done" ? "selected" : "" ?>
-                        >
-                            DONE
-                        </option>
-
+                        <option value="Todo">Todo</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Review">Review</option>
+                        <option value="Done">Done</option>
                     </select>
 
-                </form>
+                </div>
 
-            </div>
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Status
+                    </label>
+
+                    <select
+                        name="status"
+                        id="addTaskStatus"
+                        class="form-select"
+                    >
+                        <option value="1" selected>Active</option>
+                        <option value="2">Inactive</option>
+                    </select>
+
+                </div>
+
+            </form>
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="addTaskSubmitBtn"
+            >
+                Add Task
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
 
 
-            <!-- ADD TASK -->
+<!-- =========================================================
+     EDIT TASK MODAL
+========================================================= -->
 
-            <?php if ($is_admin): ?>
+<div
+    class="modal fade"
+    id="editTaskModal"
+    tabindex="-1"
+    aria-labelledby="editTaskModalLabel"
+    aria-hidden="true"
+>
 
-                <a
-                    href="add.php"
-                    class="btn btn-primary add-task-btn"
+<div class="modal-dialog modal-dialog-centered">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h5
+                class="modal-title"
+                id="editTaskModalLabel"
+            >
+                Edit Task
+            </h5>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+            ></button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <div
+                id="editTaskError"
+                class="alert alert-danger d-none"
+            ></div>
+
+            <form id="editTaskForm">
+
+                <input
+                    type="hidden"
+                    name="id"
+                    id="editTaskId"
                 >
 
-                    + Add Task
+                <div class="mb-3">
 
-                </a>
+                    <label class="form-label">
+                        Task
+                    </label>
 
-            <?php endif; ?>
+                    <input
+                        type="text"
+                        name="task"
+                        id="editTaskTitle"
+                        class="form-control"
+                        placeholder="Enter task title"
+                        maxlength="255"
+                        required
+                    >
 
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Description
+                    </label>
+
+                    <textarea
+                        name="description"
+                        id="editTaskDescription"
+                        class="form-control"
+                        rows="4"
+                        placeholder="Enter task description"
+                    ></textarea>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Priority
+                    </label>
+
+                    <select
+                        name="priority"
+                        id="editTaskPriority"
+                        class="form-select"
+                    >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Progress
+                    </label>
+
+                    <select
+                        name="progress"
+                        id="editTaskProgress"
+                        class="form-select"
+                    >
+                        <option value="Todo">Todo</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Review">Review</option>
+                        <option value="Done">Done</option>
+                    </select>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Status
+                    </label>
+
+                    <select
+                        name="status"
+                        id="editTaskStatus"
+                        class="form-select"
+                    >
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                    </select>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Completion
+                    </label>
+
+                    <select
+                        name="is_completed"
+                        id="editTaskCompleted"
+                        class="form-select"
+                    >
+                        <option value="0">Incomplete</option>
+                        <option value="1">Complete</option>
+                    </select>
+
+                </div>
+
+            </form>
+
+        </div>
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                id="editTaskSubmitBtn"
+            >
+                Update Task
+            </button>
 
         </div>
 
     </div>
 
-
-    <!-- =====================================================
-         BOARD
-    ====================================================== -->
-
-    <div class="board-wrapper">
-
-        <div class="task-board">
-
-
-            <!-- =================================================
-                 TODO
-            ================================================== -->
-
-            <div
-                class="task-column"
-                data-progress="Todo"
-            >
-
-                <div class="column-header">
-
-                    <span class="column-title">
-                        TODO
-                    </span>
-
-
-                    <span class="column-count">
-                        <?= count($todo_tasks) ?>
-                    </span>
-
-                </div>
-
-
-                <div class="task-list">
-
-                    <?php foreach ($todo_tasks as $task): ?>
-
-                        <div
-                            class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
-                            draggable="true"
-                            data-task-id="<?= (int)$task["id"] ?>"
-                        >
-
-
-                            <div class="task-title">
-
-                                <?= htmlspecialchars($task["task"]) ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["description"])): ?>
-
-                                <div class="task-description">
-
-                                    <?= nl2br(htmlspecialchars($task["description"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <div class="task-meta">
-
-
-                                <!-- PRIORITY -->
-
-                                <span class="priority-badge">
-
-                                    <?= htmlspecialchars($task["priority"]) ?>
-
-                                </span>
-
-
-                                <!-- PROGRESS -->
-
-                                <span
-                                    class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
-                                >
-
-                                    <?= htmlspecialchars($task["progress"]) ?>
-
-                                </span>
-
-
-                                <!-- COMPLETION -->
-
-                                <?php if ((int)$task["is_completed"] === 1): ?>
-
-                                    <span class="completion-badge completed">
-
-                                        <i class="bi bi-check-circle-fill"></i>
-
-                                        Completed
-
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <span class="completion-badge incomplete">
-
-                                        <i class="bi bi-circle"></i>
-
-                                        Incomplete
-
-                                    </span>
-
-                                <?php endif; ?>
-
-
-                            </div>
-
-
-                            <!-- DATE -->
-
-                            <?php if (!empty($task["editedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
-
-                                </div>
-
-                            <?php elseif (!empty($task["addedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <!-- ADMIN MENU -->
-
-                            <?php if ($is_admin): ?>
-
-                                <div class="task-menu">
-
-                                    <button
-                                        type="button"
-                                        class="task-menu-button"
-                                        aria-label="Task menu"
-                                    >
-                                        ⋮
-                                    </button>
-
-
-                                    <div class="task-menu-content">
-
-                                        <a
-                                            href="view.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            View
-                                        </a>
-
-
-                                        <a
-                                            href="edit.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            Edit
-                                        </a>
-
-
-                                        <a
-                                            href="delete.php?id=<?= (int)$task["id"] ?>"
-                                            class="delete-link"
-                                            onclick="return confirm('Are you sure you want to delete this task?');"
-                                        >
-                                            Delete
-                                        </a>
-
-                                    </div>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                        </div>
-
-                    <?php endforeach; ?>
-
-                </div>
-
-            </div>
-
-
-            <!-- =================================================
-                 IN PROGRESS
-            ================================================== -->
-
-            <div
-                class="task-column"
-                data-progress="In Progress"
-            >
-
-                <div class="column-header">
-
-                    <span class="column-title">
-                        IN PROGRESS
-                    </span>
-
-
-                    <span class="column-count">
-                        <?= count($in_progress_tasks) ?>
-                    </span>
-
-                </div>
-
-
-                <div class="task-list">
-
-                    <?php foreach ($in_progress_tasks as $task): ?>
-
-                        <div
-                            class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
-                            draggable="true"
-                            data-task-id="<?= (int)$task["id"] ?>"
-                        >
-
-                            <div class="task-title">
-
-                                <?= htmlspecialchars($task["task"]) ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["description"])): ?>
-
-                                <div class="task-description">
-
-                                    <?= nl2br(htmlspecialchars($task["description"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <div class="task-meta">
-
-                                <span class="priority-badge">
-
-                                    <?= htmlspecialchars($task["priority"]) ?>
-
-                                </span>
-
-
-                                <span
-                                    class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
-                                >
-
-                                    <?= htmlspecialchars($task["progress"]) ?>
-
-                                </span>
-
-
-                                <?php if ((int)$task["is_completed"] === 1): ?>
-
-                                    <span class="completion-badge completed">
-
-                                        <i class="bi bi-check-circle-fill"></i>
-
-                                        Completed
-
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <span class="completion-badge incomplete">
-
-                                        <i class="bi bi-circle"></i>
-
-                                        Incomplete
-
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["editedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
-
-                                </div>
-
-                            <?php elseif (!empty($task["addedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <?php if ($is_admin): ?>
-
-                                <div class="task-menu">
-
-                                    <button
-                                        type="button"
-                                        class="task-menu-button"
-                                        aria-label="Task menu"
-                                    >
-                                        ⋮
-                                    </button>
-
-
-                                    <div class="task-menu-content">
-
-                                        <a
-                                            href="view.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            View
-                                        </a>
-
-
-                                        <a
-                                            href="edit.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            Edit
-                                        </a>
-
-
-                                        <a
-                                            href="delete.php?id=<?= (int)$task["id"] ?>"
-                                            class="delete-link"
-                                            onclick="return confirm('Are you sure you want to delete this task?');"
-                                        >
-                                            Delete
-                                        </a>
-
-                                    </div>
-
-                                </div>
-
-                            <?php endif; ?>
-
-                        </div>
-
-                    <?php endforeach; ?>
-
-                </div>
-
-            </div>
-
-
-            <!-- =================================================
-                 REVIEW
-            ================================================== -->
-
-            <div
-                class="task-column"
-                data-progress="Review"
-            >
-
-                <div class="column-header">
-
-                    <span class="column-title">
-                        REVIEW
-                    </span>
-
-
-                    <span class="column-count">
-                        <?= count($review_tasks) ?>
-                    </span>
-
-                </div>
-
-
-                <div class="task-list">
-
-                    <?php foreach ($review_tasks as $task): ?>
-
-                        <div
-                            class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
-                            draggable="true"
-                            data-task-id="<?= (int)$task["id"] ?>"
-                        >
-
-                            <div class="task-title">
-
-                                <?= htmlspecialchars($task["task"]) ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["description"])): ?>
-
-                                <div class="task-description">
-
-                                    <?= nl2br(htmlspecialchars($task["description"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <div class="task-meta">
-
-                                <span class="priority-badge">
-
-                                    <?= htmlspecialchars($task["priority"]) ?>
-
-                                </span>
-
-
-                                <span
-                                    class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
-                                >
-
-                                    <?= htmlspecialchars($task["progress"]) ?>
-
-                                </span>
-
-
-                                <?php if ((int)$task["is_completed"] === 1): ?>
-
-                                    <span class="completion-badge completed">
-
-                                        <i class="bi bi-check-circle-fill"></i>
-
-                                        Completed
-
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <span class="completion-badge incomplete">
-
-                                        <i class="bi bi-circle"></i>
-
-                                        Incomplete
-
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["editedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
-
-                                </div>
-
-                            <?php elseif (!empty($task["addedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <?php if ($is_admin): ?>
-
-                                <div class="task-menu">
-
-                                    <button
-                                        type="button"
-                                        class="task-menu-button"
-                                        aria-label="Task menu"
-                                    >
-                                        ⋮
-                                    </button>
-
-
-                                    <div class="task-menu-content">
-
-                                        <a
-                                            href="view.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            View
-                                        </a>
-
-
-                                        <a
-                                            href="edit.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            Edit
-                                        </a>
-
-
-                                        <a
-                                            href="delete.php?id=<?= (int)$task["id"] ?>"
-                                            class="delete-link"
-                                            onclick="return confirm('Are you sure you want to delete this task?');"
-                                        >
-                                            Delete
-                                        </a>
-
-                                    </div>
-
-                                </div>
-
-                            <?php endif; ?>
-
-                        </div>
-
-                    <?php endforeach; ?>
-
-                </div>
-
-            </div>
-
-
-            <!-- =================================================
-                 DONE
-            ================================================== -->
-
-            <div
-                class="task-column"
-                data-progress="Done"
-            >
-
-                <div class="column-header">
-
-                    <span class="column-title">
-                        DONE
-                    </span>
-
-
-                    <span class="column-count">
-                        <?= count($done_tasks) ?>
-                    </span>
-
-                </div>
-
-
-                <div class="task-list">
-
-                    <?php foreach ($done_tasks as $task): ?>
-
-                        <div
-                            class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
-                            draggable="true"
-                            data-task-id="<?= (int)$task["id"] ?>"
-                        >
-
-                            <div class="task-title">
-
-                                <?= htmlspecialchars($task["task"]) ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["description"])): ?>
-
-                                <div class="task-description">
-
-                                    <?= nl2br(htmlspecialchars($task["description"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <div class="task-meta">
-
-                                <span class="priority-badge">
-
-                                    <?= htmlspecialchars($task["priority"]) ?>
-
-                                </span>
-
-
-                                <span
-                                    class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
-                                >
-
-                                    <?= htmlspecialchars($task["progress"]) ?>
-
-                                </span>
-
-
-                                <?php if ((int)$task["is_completed"] === 1): ?>
-
-                                    <span class="completion-badge completed">
-
-                                        <i class="bi bi-check-circle-fill"></i>
-
-                                        Completed
-
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <span class="completion-badge incomplete">
-
-                                        <i class="bi bi-circle"></i>
-
-                                        Incomplete
-
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </div>
-
-
-                            <?php if (!empty($task["editedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
-
-                                </div>
-
-                            <?php elseif (!empty($task["addedDate"])): ?>
-
-                                <div class="task-date">
-
-                                    <i class="bi bi-clock"></i>
-
-                                    <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <?php if ($is_admin): ?>
-
-                                <div class="task-menu">
-
-                                    <button
-                                        type="button"
-                                        class="task-menu-button"
-                                        aria-label="Task menu"
-                                    >
-                                        ⋮
-                                    </button>
-
-
-                                    <div class="task-menu-content">
-
-                                        <a
-                                            href="view.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            View
-                                        </a>
-
-
-                                        <a
-                                            href="edit.php?id=<?= (int)$task["id"] ?>"
-                                        >
-                                            Edit
-                                        </a>
-
-
-                                        <a
-                                            href="delete.php?id=<?= (int)$task["id"] ?>"
-                                            class="delete-link"
-                                            onclick="return confirm('Are you sure you want to delete this task?');"
-                                        >
-                                            Delete
-                                        </a>
-
-                                    </div>
-
-                                </div>
-
-                            <?php endif; ?>
-
-                        </div>
-
-                    <?php endforeach; ?>
-
-                </div>
-
-            </div>
-
-
-        </div>
-
-    </div>
+</div>
 
 </div>
 
@@ -2094,6 +3352,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 >
     Task status updated
 </div>
+
+
+<!-- =========================================================
+     BOOTSTRAP JS
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
 
 
 <script>
@@ -2125,51 +3392,746 @@ let originalParent = null;
 
 let originalNextSibling = null;
 
+let suppressCardClick = false;
+
+let currentTaskId = 0;
+
 const TOUCH_LONG_PRESS = 300;
 
 const TOUCH_MOVE_THRESHOLD = 10;
 
 
 /* =========================================================
-   THREE DOT MENU
+   TASK DETAILS MODAL
 ========================================================= */
 
-document.addEventListener("click", function(event) {
-
-    const menuButton = event.target.closest(".task-menu-button");
-
-
-    if (menuButton) {
-
-        event.preventDefault();
-
-        event.stopPropagation();
+const taskDetailsModalElement =
+    document.getElementById(
+        "taskDetailsModal"
+    );
 
 
-        const menu = menuButton
-            .closest(".task-menu")
-            ?.querySelector(".task-menu-content");
+let taskDetailsModal = null;
 
 
-        document
-            .querySelectorAll(".task-menu-content.show")
-            .forEach(function(item) {
+if (taskDetailsModalElement) {
 
-                if (item !== menu) {
+    taskDetailsModal =
+        new bootstrap.Modal(
+            taskDetailsModalElement
+        );
 
-                    item.classList.remove("show");
-
-                }
-
-            });
+}
 
 
-        if (menu) {
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
 
-            menu.classList.toggle("show");
+function escapeHtml(value)
+{
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        value ?? "";
+
+    return div.innerHTML;
+
+}
+
+
+/* =========================================================
+   ATTRIBUTE ESCAPE
+========================================================= */
+
+function escapeAttribute(value)
+{
+
+    return escapeHtml(value)
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+/* =========================================================
+   SET MODAL VALUE
+========================================================= */
+
+function setModalValue(
+    elementId,
+    value
+)
+{
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!element) {
+
+        return;
+
+    }
+
+
+    element.textContent =
+        value || "—";
+
+}
+
+
+/* =========================================================
+   LOAD COMMENTS
+========================================================= */
+
+function loadTaskComments(taskId)
+{
+
+    const commentsList =
+        document.getElementById(
+            "taskCommentsList"
+        );
+
+
+    if (!commentsList) {
+
+        return;
+
+    }
+
+
+    commentsList.innerHTML = `
+        <div class="text-muted small">
+            Loading comments...
+        </div>
+    `;
+
+
+    fetch(
+        "get_comments.php?task_id=" +
+        encodeURIComponent(taskId),
+        {
+            method: "GET",
+            cache: "no-store"
+        }
+    )
+    .then(function(response) {
+
+        return response.json();
+
+    })
+    .then(function(data) {
+
+        if (!data.success) {
+
+            commentsList.innerHTML = `
+                <div class="text-danger small">
+                    ${escapeHtml(
+                        data.message ||
+                        "Unable to load comments."
+                    )}
+                </div>
+            `;
+
+            return;
 
         }
 
+
+        if (
+            !data.comments ||
+            data.comments.length === 0
+        ) {
+
+            commentsList.innerHTML = `
+                <div class="text-muted small">
+                    No comments yet.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        commentsList.innerHTML =
+            data.comments.map(
+                function(comment) {
+
+                    return `
+                        <div class="task-comment-item">
+
+                            <div class="task-comment-header">
+
+                                <span class="task-comment-user">
+
+                                    <i class="bi bi-person-circle"></i>
+
+                                    ${escapeHtml(
+                                        comment.user_name ||
+                                        "User"
+                                    )}
+
+                                </span>
+
+
+                                <span class="task-comment-date">
+
+                                    ${escapeHtml(
+                                        comment.created_at ||
+                                        ""
+                                    )}
+
+                                </span>
+
+                            </div>
+
+
+                            <div class="task-comment-text">
+
+                                ${escapeHtml(
+                                    comment.comment ||
+                                    ""
+                                )}
+
+                            </div>
+
+                        </div>
+                    `;
+
+                }
+            ).join("");
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "Comments error:",
+            error
+        );
+
+
+        commentsList.innerHTML = `
+            <div class="text-danger small">
+                Unable to load comments.
+            </div>
+        `;
+
+    });
+
+}
+
+
+/* =========================================================
+   ADD COMMENT
+========================================================= */
+
+function addTaskComment()
+{
+
+    const input =
+        document.getElementById(
+            "taskCommentInput"
+        );
+
+
+    const button =
+        document.getElementById(
+            "addCommentButton"
+        );
+
+
+    if (!input) {
+
+        return;
+
+    }
+
+
+    const comment =
+        input.value.trim();
+
+
+    if (currentTaskId <= 0) {
+
+        alert("Invalid task.");
+
+        return;
+
+    }
+
+
+    if (comment === "") {
+
+        alert("Please enter a comment.");
+
+        input.focus();
+
+        return;
+
+    }
+
+
+    const formData =
+        new FormData();
+
+
+    formData.append(
+        "task_id",
+        currentTaskId
+    );
+
+
+    formData.append(
+        "comment",
+        comment
+    );
+
+
+    if (button) {
+
+        button.disabled = true;
+
+        button.innerHTML = `
+            <span
+                class="spinner-border spinner-border-sm"
+            ></span>
+
+            Adding...
+        `;
+
+    }
+
+
+    fetch(
+        "add_comment.php",
+        {
+            method: "POST",
+            body: formData
+        }
+    )
+    .then(function(response) {
+
+        return response.json();
+
+    })
+    .then(function(data) {
+
+        if (!data.success) {
+
+            alert(
+                data.message ||
+                "Unable to add comment."
+            );
+
+            return;
+
+        }
+
+
+        input.value = "";
+
+        loadTaskComments(
+            currentTaskId
+        );
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "Add comment error:",
+            error
+        );
+
+
+        alert(
+            "Unable to add comment."
+        );
+
+    })
+    .finally(function() {
+
+        if (button) {
+
+            button.disabled = false;
+
+            button.innerHTML = `
+                <i class="bi bi-send"></i>
+                Add Comment
+            `;
+
+        }
+
+    });
+
+}
+
+
+/* =========================================================
+   LOAD ATTACHMENTS
+========================================================= */
+
+function loadTaskAttachments(taskId)
+{
+
+    const attachmentsList =
+        document.getElementById(
+            "taskAttachmentsList"
+        );
+
+
+    if (!attachmentsList) {
+
+        return;
+
+    }
+
+
+    attachmentsList.innerHTML = `
+        <div class="text-muted small">
+            Loading files...
+        </div>
+    `;
+
+
+    fetch(
+        "get_attachments.php?task_id=" +
+        encodeURIComponent(taskId),
+        {
+            method: "GET",
+            cache: "no-store"
+        }
+    )
+    .then(function(response) {
+
+        return response.json();
+
+    })
+    .then(function(data) {
+
+        if (!data.success) {
+
+            attachmentsList.innerHTML = `
+                <div class="text-danger small">
+                    ${escapeHtml(
+                        data.message ||
+                        "Unable to load files."
+                    )}
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        if (
+            !data.attachments ||
+            data.attachments.length === 0
+        ) {
+
+            attachmentsList.innerHTML = `
+                <div class="text-muted small">
+                    No files uploaded yet.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        attachmentsList.innerHTML =
+            data.attachments.map(
+                function(file) {
+
+                    const fileUrl =
+                        "../" +
+                        file.file_path;
+
+
+                    let preview = "";
+
+
+                    if (file.is_image) {
+
+                        preview = `
+                            <a
+                                href="${escapeAttribute(fileUrl)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+
+                                <img
+                                    src="${escapeAttribute(fileUrl)}"
+                                    class="task-attachment-preview"
+                                    alt="${escapeAttribute(
+                                        file.original_name
+                                    )}"
+                                >
+
+                            </a>
+                        `;
+
+                    }
+                    else {
+
+                        preview = `
+                            <div class="attachment-file-icon">
+
+                                <i class="bi bi-file-earmark-text"></i>
+
+                            </div>
+                        `;
+
+                    }
+
+
+                    return `
+                        <div
+                            class="task-attachment-item"
+                        >
+
+                            ${preview}
+
+
+                            <div
+                                class="task-attachment-info"
+                            >
+
+                                <div>
+
+                                    <div
+                                        class="task-attachment-name"
+                                    >
+                                        ${escapeHtml(
+                                            file.original_name
+                                        )}
+                                    </div>
+
+
+                                    <div
+                                        class="task-attachment-date"
+                                    >
+                                        ${escapeHtml(
+                                            file.uploaded_at ||
+                                            ""
+                                        )}
+                                    </div>
+
+                                </div>
+
+
+                                <div
+                                    class="task-attachment-actions"
+                                >
+
+                                    <a
+                                        href="${escapeAttribute(fileUrl)}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Open"
+                                    >
+
+                                        <i
+                                            class="bi bi-box-arrow-up-right"
+                                        ></i>
+
+                                    </a>
+
+
+                                    <button
+                                        type="button"
+                                        title="Delete"
+                                        onclick="deleteTaskAttachment(${Number(file.id)})"
+                                    >
+
+                                        <i
+                                            class="bi bi-trash text-danger"
+                                        ></i>
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    `;
+
+                }
+            ).join("");
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "Attachments error:",
+            error
+        );
+
+
+        attachmentsList.innerHTML = `
+            <div class="text-danger small">
+                Unable to load files.
+            </div>
+        `;
+
+    });
+
+}
+
+
+/* =========================================================
+   UPLOAD ATTACHMENT
+========================================================= */
+
+function uploadTaskAttachment(file)
+{
+
+    if (!file) {
+
+        return;
+
+    }
+
+
+    if (currentTaskId <= 0) {
+
+        alert("Invalid task.");
+
+        return;
+
+    }
+
+
+    const maxSize =
+        10 * 1024 * 1024;
+
+
+    if (file.size > maxSize) {
+
+        alert(
+            "File size cannot exceed 10 MB."
+        );
+
+        return;
+
+    }
+
+
+    const formData =
+        new FormData();
+
+
+    formData.append(
+        "task_id",
+        currentTaskId
+    );
+
+
+    formData.append(
+        "attachment",
+        file
+    );
+
+
+    const attachmentsList =
+        document.getElementById(
+            "taskAttachmentsList"
+        );
+
+
+    if (attachmentsList) {
+
+        attachmentsList.innerHTML = `
+            <div class="text-primary small">
+
+                <span
+                    class="spinner-border spinner-border-sm me-2"
+                ></span>
+
+                Uploading file...
+
+            </div>
+        `;
+
+    }
+
+
+    fetch(
+        "upload_attachment.php",
+        {
+            method: "POST",
+            body: formData
+        }
+    )
+    .then(function(response) {
+
+        return response.json();
+
+    })
+    .then(function(data) {
+
+        if (!data.success) {
+
+            alert(
+                data.message ||
+                "Upload failed."
+            );
+
+
+            loadTaskAttachments(
+                currentTaskId
+            );
+
+            return;
+
+        }
+
+
+        loadTaskAttachments(
+            currentTaskId
+        );
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "Upload error:",
+            error
+        );
+
+
+        alert(
+            "Unable to upload file."
+        );
+
+
+        loadTaskAttachments(
+            currentTaskId
+        );
+
+    });
+
+}
+
+
+/* =========================================================
+   DELETE ATTACHMENT
+========================================================= */
+
+function deleteTaskAttachment(
+    attachmentId
+)
+{
+
+    if (!attachmentId) {
 
         return;
 
@@ -2177,27 +4139,576 @@ document.addEventListener("click", function(event) {
 
 
     if (
-        !event.target.closest(".task-menu-content")
+        !confirm(
+            "Are you sure you want to delete this file?"
+        )
     ) {
 
-        document
-            .querySelectorAll(".task-menu-content.show")
-            .forEach(function(item) {
-
-                item.classList.remove("show");
-
-            });
+        return;
 
     }
 
-});
+
+    const formData =
+        new FormData();
+
+
+    formData.append(
+        "attachment_id",
+        attachmentId
+    );
+
+
+    fetch(
+        "delete_attachment.php",
+        {
+            method: "POST",
+            body: formData
+        }
+    )
+    .then(function(response) {
+
+        return response.json();
+
+    })
+    .then(function(data) {
+
+        if (!data.success) {
+
+            alert(
+                data.message ||
+                "Unable to delete file."
+            );
+
+            return;
+
+        }
+
+
+        loadTaskAttachments(
+            currentTaskId
+        );
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "Delete attachment error:",
+            error
+        );
+
+
+        alert(
+            "Unable to delete file."
+        );
+
+    });
+
+}
+
+
+/* =========================================================
+   OPEN TASK DETAILS
+========================================================= */
+
+function openTaskDetails(card)
+{
+
+    if (!card || !taskDetailsModal) {
+
+        return;
+
+    }
+
+
+    const taskId =
+        card.dataset.taskId || "—";
+
+
+    const taskTitle =
+        card.dataset.taskTitle || "—";
+
+
+    const taskDescription =
+        card.dataset.taskDescription || "";
+
+
+    const taskPriority =
+        card.dataset.taskPriority || "—";
+
+
+    const taskProgress =
+        card.dataset.taskProgress || "—";
+
+
+    const taskCompleted =
+        card.dataset.taskCompleted || "—";
+
+
+    const taskStatus =
+        card.dataset.taskStatus || "—";
+
+
+    const taskAdded =
+        card.dataset.taskAdded || "—";
+
+
+    const taskEdited =
+        card.dataset.taskEdited || "—";
+
+
+    /* =====================================================
+       SAVE CURRENT TASK ID
+    ===================================================== */
+
+    currentTaskId =
+        Number(taskId) || 0;
+
+
+    /* =====================================================
+       BASIC VALUES
+    ===================================================== */
+
+    setModalValue(
+        "modalTaskId",
+        taskId
+    );
+
+
+    setModalValue(
+        "modalTaskTitle",
+        taskTitle
+    );
+
+
+    setModalValue(
+        "modalTaskPriority",
+        taskPriority
+    );
+
+
+    setModalValue(
+        "modalTaskProgress",
+        taskProgress
+    );
+
+
+    setModalValue(
+        "modalTaskCompleted",
+        taskCompleted
+    );
+
+
+    setModalValue(
+        "modalTaskStatus",
+        taskStatus
+    );
+
+
+    setModalValue(
+        "modalTaskAdded",
+        taskAdded
+    );
+
+
+    setModalValue(
+        "modalTaskEdited",
+        taskEdited
+    );
+
+
+    /* =====================================================
+       DESCRIPTION
+    ===================================================== */
+
+    const descriptionElement =
+        document.getElementById(
+            "modalTaskDescription"
+        );
+
+
+    if (descriptionElement) {
+
+        if (
+            taskDescription.trim() !== ""
+        ) {
+
+            descriptionElement.textContent =
+                taskDescription;
+
+            descriptionElement.classList.remove(
+                "empty"
+            );
+
+        }
+        else {
+
+            descriptionElement.textContent =
+                "No description provided.";
+
+            descriptionElement.classList.add(
+                "empty"
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       COMPLETE / INCOMPLETE COLOR
+    ===================================================== */
+
+    const completedElement =
+        document.getElementById(
+            "modalTaskCompleted"
+        );
+
+
+    if (completedElement) {
+
+        completedElement.classList.remove(
+            "complete",
+            "incomplete"
+        );
+
+
+        if (
+            taskCompleted === "Complete"
+        ) {
+
+            completedElement.classList.add(
+                "complete"
+            );
+
+        }
+        else {
+
+            completedElement.classList.add(
+                "incomplete"
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       ACTIVE / INACTIVE COLOR
+    ===================================================== */
+
+    const statusElement =
+        document.getElementById(
+            "modalTaskStatus"
+        );
+
+
+    if (statusElement) {
+
+        statusElement.classList.remove(
+            "status-active",
+            "status-inactive"
+        );
+
+
+        if (
+            taskStatus === "Active"
+        ) {
+
+            statusElement.classList.add(
+                "status-active"
+            );
+
+        }
+        else {
+
+            statusElement.classList.add(
+                "status-inactive"
+            );
+
+        }
+
+    }
+
+
+    /* =====================================================
+       CLEAR COMMENT INPUT
+    ===================================================== */
+
+    const commentInput =
+        document.getElementById(
+            "taskCommentInput"
+        );
+
+
+    if (commentInput) {
+
+        commentInput.value = "";
+
+    }
+
+
+    /* =====================================================
+       LOAD COMMENTS
+    ===================================================== */
+
+    loadTaskComments(
+        currentTaskId
+    );
+
+
+    /* =====================================================
+       LOAD ATTACHMENTS
+    ===================================================== */
+
+    loadTaskAttachments(
+        currentTaskId
+    );
+
+
+    /* =====================================================
+       SHOW MODAL
+    ===================================================== */
+
+    taskDetailsModal.show();
+
+}
+
+
+/* =========================================================
+   TASK CARD CLICK
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        const card =
+            event.target.closest(
+                ".task-card"
+            );
+
+
+        if (!card) {
+
+            return;
+
+        }
+
+
+        if (
+            event.target.closest(
+                ".task-menu"
+            ) ||
+            event.target.closest("a") ||
+            event.target.closest("button")
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            draggedCard ||
+            isTouchDragging ||
+            suppressCardClick
+        ) {
+
+            return;
+
+        }
+
+
+        openTaskDetails(card);
+
+    }
+);
+
+
+/* =========================================================
+   ADD COMMENT BUTTON
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        if (
+            event.target.closest(
+                "#addCommentButton"
+            )
+        ) {
+
+            event.preventDefault();
+
+            addTaskComment();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   CTRL + ENTER ADD COMMENT
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.target &&
+            event.target.id ===
+            "taskCommentInput" &&
+            event.ctrlKey &&
+            event.key === "Enter"
+        ) {
+
+            event.preventDefault();
+
+            addTaskComment();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   FILE INPUT CHANGE
+========================================================= */
+
+document.addEventListener(
+    "change",
+    function(event) {
+
+        if (
+            event.target.id !==
+            "taskAttachmentInput"
+        ) {
+
+            return;
+
+        }
+
+
+        const file =
+            event.target.files[0];
+
+
+        if (file) {
+
+            uploadTaskAttachment(
+                file
+            );
+
+        }
+
+
+        event.target.value = "";
+
+    }
+);
+
+
+/* =========================================================
+   THREE DOT MENU
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        const menuButton =
+            event.target.closest(
+                ".task-menu-button"
+            );
+
+
+        if (menuButton) {
+
+            event.preventDefault();
+
+            event.stopPropagation();
+
+
+            const menu =
+                menuButton
+                    .closest(".task-menu")
+                    ?.querySelector(
+                        ".task-menu-content"
+                    );
+
+
+            document
+                .querySelectorAll(
+                    ".task-menu-content.show"
+                )
+                .forEach(
+                    function(item) {
+
+                        if (item !== menu) {
+
+                            item.classList.remove(
+                                "show"
+                            );
+
+                        }
+
+                    }
+                );
+
+
+            if (menu) {
+
+                menu.classList.toggle(
+                    "show"
+                );
+
+            }
+
+
+            return;
+
+        }
+
+
+        if (
+            !event.target.closest(
+                ".task-menu-content"
+            )
+        ) {
+
+            document
+                .querySelectorAll(
+                    ".task-menu-content.show"
+                )
+                .forEach(
+                    function(item) {
+
+                        item.classList.remove(
+                            "show"
+                        );
+
+                    }
+                );
+
+        }
+
+    }
+);
 
 
 /* =========================================================
    SHOW MESSAGE
 ========================================================= */
 
-function showMessage(element, duration)
+function showMessage(
+    element,
+    duration
+)
 {
 
     if (!element) {
@@ -2207,7 +4718,8 @@ function showMessage(element, duration)
     }
 
 
-    element.style.display = "block";
+    element.style.display =
+        "block";
 
 
     clearTimeout(
@@ -2215,14 +4727,16 @@ function showMessage(element, duration)
     );
 
 
-    element.hideTimer = setTimeout(
-        function() {
+    element.hideTimer =
+        setTimeout(
+            function() {
 
-            element.style.display = "none";
+                element.style.display =
+                    "none";
 
-        },
-        duration || 1500
-    );
+            },
+            duration || 1500
+        );
 
 }
 
@@ -2235,7 +4749,10 @@ document.addEventListener(
     "dragstart",
     function(event) {
 
-        const card = event.target.closest(".task-card");
+        const card =
+            event.target.closest(
+                ".task-card"
+            );
 
 
         if (!card) {
@@ -2245,15 +4762,23 @@ document.addEventListener(
         }
 
 
-        draggedCard = card;
+        suppressCardClick =
+            true;
 
 
-        card.classList.add("dragging");
+        draggedCard =
+            card;
+
+
+        card.classList.add(
+            "dragging"
+        );
 
 
         if (event.dataTransfer) {
 
-            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.effectAllowed =
+                "move";
 
 
             event.dataTransfer.setData(
@@ -2265,7 +4790,9 @@ document.addEventListener(
 
 
         showMessage(
-            document.getElementById("dragHint"),
+            document.getElementById(
+                "dragHint"
+            ),
             3000
         );
 
@@ -2281,12 +4808,17 @@ document.addEventListener(
     "dragend",
     function(event) {
 
-        const card = event.target.closest(".task-card");
+        const card =
+            event.target.closest(
+                ".task-card"
+            );
 
 
         if (card) {
 
-            card.classList.remove("dragging");
+            card.classList.remove(
+                "dragging"
+            );
 
         }
 
@@ -2294,7 +4826,19 @@ document.addEventListener(
         clearColumnHighlights();
 
 
-        draggedCard = null;
+        draggedCard =
+            null;
+
+
+        setTimeout(
+            function() {
+
+                suppressCardClick =
+                    false;
+
+            },
+            250
+        );
 
     }
 );
@@ -2304,7 +4848,10 @@ document.addEventListener(
    GET TASK BEFORE POSITION
 ========================================================= */
 
-function getTaskBefore(container, y)
+function getTaskBefore(
+    container,
+    y
+)
 {
 
     const cards = [
@@ -2316,32 +4863,38 @@ function getTaskBefore(container, y)
 
     let closest = null;
 
-    let closestOffset = Number.NEGATIVE_INFINITY;
+    let closestOffset =
+        Number.NEGATIVE_INFINITY;
 
 
-    cards.forEach(function(card) {
+    cards.forEach(
+        function(card) {
 
-        const box = card.getBoundingClientRect();
-
-
-        const offset =
-            y -
-            box.top -
-            box.height / 2;
+            const box =
+                card.getBoundingClientRect();
 
 
-        if (
-            offset < 0 &&
-            offset > closestOffset
-        ) {
+            const offset =
+                y -
+                box.top -
+                box.height / 2;
 
-            closestOffset = offset;
 
-            closest = card;
+            if (
+                offset < 0 &&
+                offset > closestOffset
+            ) {
+
+                closestOffset =
+                    offset;
+
+                closest =
+                    card;
+
+            }
 
         }
-
-    });
+    );
 
 
     return closest;
@@ -2353,16 +4906,23 @@ function getTaskBefore(container, y)
    SHOW DROP POSITION
 ========================================================= */
 
-function showDropPosition(container, y)
+function showDropPosition(
+    container,
+    y
+)
 {
 
     document
-        .querySelectorAll(".drop-indicator")
-        .forEach(function(indicator) {
+        .querySelectorAll(
+            ".drop-indicator"
+        )
+        .forEach(
+            function(indicator) {
 
-            indicator.remove();
+                indicator.remove();
 
-        });
+            }
+        );
 
 
     const before =
@@ -2373,7 +4933,9 @@ function showDropPosition(container, y)
 
 
     const indicator =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
 
     indicator.className =
@@ -2411,23 +4973,31 @@ function clearColumnHighlights()
 {
 
     document
-        .querySelectorAll(".task-column")
-        .forEach(function(column) {
+        .querySelectorAll(
+            ".task-column"
+        )
+        .forEach(
+            function(column) {
 
-            column.classList.remove(
-                "drag-over"
-            );
+                column.classList.remove(
+                    "drag-over"
+                );
 
-        });
+            }
+        );
 
 
     document
-        .querySelectorAll(".drop-indicator")
-        .forEach(function(indicator) {
+        .querySelectorAll(
+            ".drop-indicator"
+        )
+        .forEach(
+            function(indicator) {
 
-            indicator.remove();
+                indicator.remove();
 
-        });
+            }
+        );
 
 }
 
@@ -2436,7 +5006,10 @@ function clearColumnHighlights()
    GET COLUMN FROM POINT
 ========================================================= */
 
-function getColumnFromPoint(x, y)
+function getColumnFromPoint(
+    x,
+    y
+)
 {
 
     const element =
@@ -2562,7 +5135,10 @@ function saveTaskProgress(
 )
 {
 
-    if (!taskId || !progress) {
+    if (
+        !taskId ||
+        !progress
+    ) {
 
         return;
 
@@ -2723,7 +5299,9 @@ document.addEventListener(
 
 
         if (
-            event.target.closest(".task-menu") ||
+            event.target.closest(
+                ".task-menu"
+            ) ||
             event.target.closest("a") ||
             event.target.closest("button")
         ) {
@@ -2787,6 +5365,10 @@ document.addEventListener(
 
 
                     isTouchDragging =
+                        true;
+
+
+                    suppressCardClick =
                         true;
 
 
@@ -2963,7 +5545,8 @@ document.addEventListener(
 
             if (
                 touchCurrentX >
-                rect.right - edgeSize
+                rect.right -
+                edgeSize
             ) {
 
                 board.scrollLeft +=
@@ -2972,7 +5555,8 @@ document.addEventListener(
             }
             else if (
                 touchCurrentX <
-                rect.left + edgeSize
+                rect.left +
+                edgeSize
             ) {
 
                 board.scrollLeft -=
@@ -3109,12 +5693,14 @@ document.addEventListener(
 
             if (
                 originalParent &&
-                card.parentNode !== originalParent
+                card.parentNode !==
+                originalParent
             ) {
 
                 if (
                     originalNextSibling &&
-                    originalNextSibling.parentNode === originalParent
+                    originalNextSibling.parentNode ===
+                    originalParent
                 ) {
 
                     originalParent.insertBefore(
@@ -3150,6 +5736,17 @@ document.addEventListener(
 
         originalNextSibling =
             null;
+
+
+        setTimeout(
+            function() {
+
+                suppressCardClick =
+                    false;
+
+            },
+            250
+        );
 
     },
     {
@@ -3212,6 +5809,17 @@ document.addEventListener(
         originalNextSibling =
             null;
 
+
+        setTimeout(
+            function() {
+
+                suppressCardClick =
+                    false;
+
+            },
+            250
+        );
+
     },
     {
         passive: true
@@ -3227,7 +5835,10 @@ document.addEventListener(
     "keydown",
     function(event) {
 
-        if (event.key !== "Escape") {
+        if (
+            event.key !==
+            "Escape"
+        ) {
 
             return;
 
@@ -3279,6 +5890,10 @@ document.addEventListener(
 
         originalNextSibling =
             null;
+
+
+        suppressCardClick =
+            false;
 
     }
 );
@@ -3340,13 +5955,555 @@ document.addEventListener(
             originalNextSibling =
                 null;
 
+
+            suppressCardClick =
+                false;
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   ADD / EDIT TASK MODALS
+========================================================= */
+
+const addTaskModalElement =
+    document.getElementById(
+        "addTaskModal"
+    );
+
+
+let addTaskModal = null;
+
+
+if (addTaskModalElement) {
+
+    addTaskModal =
+        new bootstrap.Modal(
+            addTaskModalElement
+        );
+
+}
+
+
+const editTaskModalElement =
+    document.getElementById(
+        "editTaskModal"
+    );
+
+
+let editTaskModal = null;
+
+
+if (editTaskModalElement) {
+
+    editTaskModal =
+        new bootstrap.Modal(
+            editTaskModalElement
+        );
+
+}
+
+
+/* =========================================================
+   OPEN ADD TASK MODAL
+========================================================= */
+
+function openAddTaskModal(progress)
+{
+
+    if (!addTaskModal) {
+
+        return;
+
+    }
+
+
+    const form =
+        document.getElementById(
+            "addTaskForm"
+        );
+
+
+    if (form) {
+
+        form.reset();
+
+    }
+
+
+    const errorBox =
+        document.getElementById(
+            "addTaskError"
+        );
+
+
+    if (errorBox) {
+
+        errorBox.textContent = "";
+
+        errorBox.classList.add(
+            "d-none"
+        );
+
+    }
+
+
+    const progressSelect =
+        document.getElementById(
+            "addTaskProgress"
+        );
+
+
+    if (
+        progressSelect &&
+        progress
+    ) {
+
+        progressSelect.value =
+            progress;
+
+    }
+
+
+    addTaskModal.show();
+
+}
+
+
+/* =========================================================
+   OPEN EDIT TASK MODAL
+========================================================= */
+
+function openEditTaskModal(card)
+{
+
+    if (!card || !editTaskModal) {
+
+        return;
+
+    }
+
+
+    const errorBox =
+        document.getElementById(
+            "editTaskError"
+        );
+
+
+    if (errorBox) {
+
+        errorBox.textContent = "";
+
+        errorBox.classList.add(
+            "d-none"
+        );
+
+    }
+
+
+    document.getElementById(
+        "editTaskId"
+    ).value =
+        card.dataset.taskId || "0";
+
+
+    document.getElementById(
+        "editTaskTitle"
+    ).value =
+        card.dataset.taskTitle || "";
+
+
+    document.getElementById(
+        "editTaskDescription"
+    ).value =
+        card.dataset.taskDescription || "";
+
+
+    document.getElementById(
+        "editTaskPriority"
+    ).value =
+        card.dataset.taskPriority || "Medium";
+
+
+    document.getElementById(
+        "editTaskProgress"
+    ).value =
+        card.dataset.taskProgress || "Todo";
+
+
+    document.getElementById(
+        "editTaskStatus"
+    ).value =
+        (
+            card.dataset.taskStatus ===
+            "Active"
+        ) ? "1" : "0";
+
+
+    document.getElementById(
+        "editTaskCompleted"
+    ).value =
+        (
+            card.dataset.taskCompleted ===
+            "Complete"
+        ) ? "1" : "0";
+
+
+    editTaskModal.show();
+
+}
+
+
+/* =========================================================
+   SUBMIT ADD / EDIT TASK FORM VIA AJAX
+========================================================= */
+
+function submitTaskForm(
+    formId,
+    actionUrl,
+    errorBoxId,
+    submitBtnId
+)
+{
+
+    const form =
+        document.getElementById(
+            formId
+        );
+
+
+    if (!form) {
+
+        return;
+
+    }
+
+
+    if (!form.reportValidity()) {
+
+        return;
+
+    }
+
+
+    const errorBox =
+        document.getElementById(
+            errorBoxId
+        );
+
+
+    const submitBtn =
+        document.getElementById(
+            submitBtnId
+        );
+
+
+    const originalBtnHtml =
+        submitBtn ?
+        submitBtn.innerHTML :
+        "";
+
+
+    if (submitBtn) {
+
+        submitBtn.disabled = true;
+
+        submitBtn.innerHTML = `
+            <span
+                class="spinner-border spinner-border-sm"
+            ></span>
+
+            Saving...
+        `;
+
+    }
+
+
+    if (errorBox) {
+
+        errorBox.textContent = "";
+
+        errorBox.classList.add(
+            "d-none"
+        );
+
+    }
+
+
+    const formData =
+        new FormData(form);
+
+
+    fetch(
+        actionUrl,
+        {
+            method: "POST",
+            headers: {
+                "X-Requested-With":
+                    "XMLHttpRequest"
+            },
+            body: formData
+        }
+    )
+    .then(function(response) {
+
+        return response.json();
+
+    })
+    .then(function(data) {
+
+        if (!data.success) {
+
+            if (errorBox) {
+
+                errorBox.textContent =
+                    data.message ||
+                    "Something went wrong.";
+
+                errorBox.classList.remove(
+                    "d-none"
+                );
+
+            }
+
+            return;
+
+        }
+
+
+        window.location.reload();
+
+    })
+    .catch(function(error) {
+
+        console.error(
+            "Task form error:",
+            error
+        );
+
+
+        if (errorBox) {
+
+            errorBox.textContent =
+                "Unable to save task. Please try again.";
+
+            errorBox.classList.remove(
+                "d-none"
+            );
+
+        }
+
+    })
+    .finally(function() {
+
+        if (submitBtn) {
+
+            submitBtn.disabled = false;
+
+            submitBtn.innerHTML =
+                originalBtnHtml;
+
+        }
+
+    });
+
+}
+
+
+/* =========================================================
+   ADD / EDIT SUBMIT BUTTON CLICKS
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        if (
+            event.target.closest(
+                "#addTaskSubmitBtn"
+            )
+        ) {
+
+            submitTaskForm(
+                "addTaskForm",
+                "add.php",
+                "addTaskError",
+                "addTaskSubmitBtn"
+            );
+
+            return;
+
+        }
+
+
+        if (
+            event.target.closest(
+                "#editTaskSubmitBtn"
+            )
+        ) {
+
+            const taskId =
+                document.getElementById(
+                    "editTaskId"
+                ).value;
+
+
+            submitTaskForm(
+                "editTaskForm",
+                "edit.php?id=" +
+                encodeURIComponent(
+                    taskId
+                ),
+                "editTaskError",
+                "editTaskSubmitBtn"
+            );
+
+            return;
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   INTERCEPT ADD BOARD / COLUMN ADD / EDIT LINKS
+   OPEN MODALS INSTEAD OF NAVIGATING
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        /* =================================================
+           TOP RIGHT "+ ADD BOARD" BUTTON
+        ================================================= */
+
+        const addBtn =
+            event.target.closest(
+                "a.add-task-btn"
+            );
+
+
+        if (addBtn) {
+
+            event.preventDefault();
+
+
+            const url =
+                new URL(
+                    addBtn.href,
+                    window.location.href
+                );
+
+
+            const progress =
+                url.searchParams.get(
+                    "progress"
+                ) || "Todo";
+
+
+            openAddTaskModal(
+                progress
+            );
+
+            return;
+
+        }
+
+
+        /* =================================================
+           PER COLUMN "+" ADD BUTTON
+        ================================================= */
+
+        const columnAddBtn =
+            event.target.closest(
+                "a.column-add-btn"
+            );
+
+
+        if (columnAddBtn) {
+
+            event.preventDefault();
+
+
+            const url =
+                new URL(
+                    columnAddBtn.href,
+                    window.location.href
+                );
+
+
+            const progress =
+                url.searchParams.get(
+                    "progress"
+                ) || "Todo";
+
+
+            openAddTaskModal(
+                progress
+            );
+
+            return;
+
+        }
+
+
+        /* =================================================
+           EDIT LINK INSIDE TASK MENU
+        ================================================= */
+
+        const editLink =
+            event.target.closest(
+                'a[href^="edit.php?id="]'
+            );
+
+
+        if (editLink) {
+
+            event.preventDefault();
+
+
+            document
+                .querySelectorAll(
+                    ".task-menu-content.show"
+                )
+                .forEach(
+                    function(item) {
+
+                        item.classList.remove(
+                            "show"
+                        );
+
+                    }
+                );
+
+
+            const card =
+                editLink.closest(
+                    ".task-card"
+                );
+
+
+            if (card) {
+
+                openEditTaskModal(
+                    card
+                );
+
+            }
+
+            return;
+
         }
 
     }
 );
 
 </script>
-
 
 </body>
 
