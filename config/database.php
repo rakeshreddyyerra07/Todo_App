@@ -1,54 +1,21 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Database Configuration
-|--------------------------------------------------------------------------
-*/
-
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "todo_app";
-
-
-/*
-|--------------------------------------------------------------------------
-| Connect to MySQL
-|--------------------------------------------------------------------------
-*/
+$servername = "db.fr-roub1.bengt.wasmernet.com";
+$username   = "user_6c0af212";
+$password   = "pw_LtxQbMJ30UpOdtcFibygjflYPE8wVzuC";
+$dbname     = "db_100af6ff";
+$port       = 20184;
 
 $conn = mysqli_connect(
-    $host,
+    $servername,
     $username,
     $password,
-    $database
+    $dbname,
+    $port
 );
 
-
-/*
-|--------------------------------------------------------------------------
-| Check Connection
-|--------------------------------------------------------------------------
-*/
-
 if (!$conn) {
-
-    die(
-        "Database connection failed: " .
-        mysqli_connect_error()
-    );
-
+    die("Database connection failed: " . mysqli_connect_error());
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Character Set
-|--------------------------------------------------------------------------
-*/
-
-mysqli_set_charset($conn, "utf8mb4");
-
-?>
-
+$conn->set_charset("utf8mb4");
