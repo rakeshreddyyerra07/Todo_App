@@ -1,3 +1,4 @@
+
 <?php
 
 session_start();
@@ -48,6 +49,7 @@ $sql = "
         task_id,
         user_id,
         original_name,
+        stored_name,
         file_path,
         file_type,
         file_size,
@@ -84,7 +86,9 @@ mysqli_stmt_bind_param(
     $task_id
 );
 
+
 mysqli_stmt_execute($stmt);
+
 
 $result = mysqli_stmt_get_result($stmt);
 
@@ -96,7 +100,9 @@ if ($result) {
 
     while ($row = mysqli_fetch_assoc($result)) {
 
-        $is_image = false;
+        /* =================================================
+           CHECK IMAGE
+        ================================================= */
 
         $extension = strtolower(
             pathinfo(
@@ -106,7 +112,7 @@ if ($result) {
         );
 
 
-        if (in_array(
+        $is_image = in_array(
             $extension,
             [
                 "jpg",
@@ -116,11 +122,43 @@ if ($result) {
                 "webp"
             ],
             true
-        )) {
+        );
 
-            $is_image = true;
-        }
 
+        /* =================================================
+           FIX FILE PATH
+        ================================================= */
+
+        $stored_file_path = trim(
+            $row["file_path"] ?? ""
+        );
+
+
+        /*
+           Remove leading slash temporarily.
+        */
+
+        $stored_file_path = ltrim(
+            $stored_file_path,
+            "/"
+        );
+
+
+        /*
+           Build the URL from the application root.
+
+           Example:
+
+           /uploads/task_files/image.jpg
+
+        */
+
+        $file_url = "/" . $stored_file_path;
+
+
+        /* =================================================
+           RETURN ATTACHMENT
+        ================================================= */
 
         $attachments[] = [
 
@@ -130,20 +168,34 @@ if ($result) {
 
             "user_id" => (int)$row["user_id"],
 
-            "original_name" => $row["original_name"],
+            "original_name" =>
+                $row["original_name"],
 
-            "file_path" => $row["file_path"],
+            "stored_name" =>
+                $row["stored_name"],
 
-            "file_type" => $row["file_type"],
+            "file_path" =>
+                $row["file_path"],
 
-            "file_size" => (int)$row["file_size"],
+            "file_url" =>
+                $file_url,
 
-            "is_image" => $is_image,
+            "file_type" =>
+                $row["file_type"],
 
-            "uploaded_at" => date(
-                "d M Y, h:i A",
-                strtotime($row["uploaded_at"])
-            )
+            "file_size" =>
+                (int)$row["file_size"],
+
+            "is_image" =>
+                $is_image,
+
+            "uploaded_at" =>
+                date(
+                    "d M Y, h:i A",
+                    strtotime(
+                        $row["uploaded_at"]
+                    )
+                )
         ];
     }
 }
@@ -151,6 +203,10 @@ if ($result) {
 
 mysqli_stmt_close($stmt);
 
+
+/* =========================================================
+   RESPONSE
+========================================================= */
 
 echo json_encode([
     "success" => true,

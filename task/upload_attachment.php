@@ -1,3 +1,4 @@
+
 <?php
 
 session_start();
@@ -51,10 +52,18 @@ $task_sql = "
     LIMIT 1
 ";
 
-$task_stmt = mysqli_prepare(
-    $conn,
-    $task_sql
-);
+$task_stmt = mysqli_prepare($conn, $task_sql);
+
+if (!$task_stmt) {
+
+    echo json_encode([
+        "success" => false,
+        "message" => "Database error while checking task."
+    ]);
+
+    exit();
+}
+
 
 mysqli_stmt_bind_param(
     $task_stmt,
@@ -118,7 +127,6 @@ if ($file["error"] !== UPLOAD_ERR_OK) {
 
 $max_size = 10 * 1024 * 1024;
 
-
 if ($file["size"] > $max_size) {
 
     echo json_encode([
@@ -135,23 +143,17 @@ if ($file["size"] > $max_size) {
 ========================================================= */
 
 $allowed_extensions = [
-
     "jpg",
     "jpeg",
     "png",
     "gif",
     "webp",
-
     "pdf",
-
     "doc",
     "docx",
-
     "xls",
     "xlsx",
-
     "txt",
-
     "zip"
 ];
 
@@ -186,11 +188,30 @@ $upload_dir = __DIR__ . "/../uploads/task_files";
 
 if (!is_dir($upload_dir)) {
 
-    mkdir(
-        $upload_dir,
-        0777,
-        true
-    );
+    if (!mkdir($upload_dir, 0777, true)) {
+
+        echo json_encode([
+            "success" => false,
+            "message" => "Unable to create upload directory."
+        ]);
+
+        exit();
+    }
+}
+
+
+/* =========================================================
+   CHECK DIRECTORY WRITABLE
+========================================================= */
+
+if (!is_writable($upload_dir)) {
+
+    echo json_encode([
+        "success" => false,
+        "message" => "Upload directory is not writable."
+    ]);
+
+    exit();
 }
 
 
@@ -206,6 +227,10 @@ $stored_name =
     "." .
     $extension;
 
+
+/* =========================================================
+   TARGET PATH
+========================================================= */
 
 $target_path =
     $upload_dir .
@@ -235,8 +260,12 @@ if (!move_uploaded_file(
    DATABASE PATH
 ========================================================= */
 
+/*
+   Store path relative to the application root.
+*/
+
 $file_path =
-    "uploads/task_files/" .
+    "/uploads/task_files/" .
     $stored_name;
 
 
@@ -278,10 +307,7 @@ $sql = "
 ";
 
 
-$stmt = mysqli_prepare(
-    $conn,
-    $sql
-);
+$stmt = mysqli_prepare($conn, $sql);
 
 
 if (!$stmt) {
@@ -317,7 +343,9 @@ if (mysqli_stmt_execute($stmt)) {
 
     echo json_encode([
         "success" => true,
-        "message" => "File uploaded successfully."
+        "message" => "File uploaded successfully.",
+        "file_path" => $file_path,
+        "stored_name" => $stored_name
     ]);
 
 } else {
