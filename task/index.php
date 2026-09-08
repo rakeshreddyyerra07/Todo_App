@@ -31,94 +31,6 @@ $display_role = ucfirst($user_role);
 
 
 /* =========================================================
-   BOARD / CREATE BOARD
-========================================================= */
-
-$selected_board_id = isset($_GET["board_id"]) ? (int)$_GET["board_id"] : 0;
-
-$board_error = "";
-
-if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "create_board") {
-
-    if (!($is_admin || $is_user)) {
-        $board_error = "You do not have permission to create a board.";
-    } else {
-        $board_name = trim($_POST["board_name"] ?? "");
-        $board_description = trim($_POST["board_description"] ?? "");
-
-        if ($board_name === "") {
-            $board_error = "Board name is required.";
-        } else {
-            $board_stmt = mysqli_prepare(
-                $conn,
-                "INSERT INTO todo_app.boards (name, description, created_by) VALUES (?, ?, ?)"
-            );
-
-            if (!$board_stmt) {
-                $board_error = "Database Error: " . mysqli_error($conn);
-            } else {
-                $created_by = (int)$_SESSION["user_id"];
-                mysqli_stmt_bind_param(
-                    $board_stmt,
-                    "ssi",
-                    $board_name,
-                    $board_description,
-                    $created_by
-                );
-
-                if (mysqli_stmt_execute($board_stmt)) {
-                    $new_board_id = mysqli_insert_id($conn);
-                    header("Location: index.php?board_id=" . (int)$new_board_id);
-                    exit();
-                }
-
-                $board_error = "Database Error: " . mysqli_stmt_error($board_stmt);
-                mysqli_stmt_close($board_stmt);
-            }
-        }
-    }
-}
-
-
-/* =========================================================
-   LOAD BOARDS
-========================================================= */
-
-$boards = [];
-
-$board_result = mysqli_query(
-    $conn,
-    "SELECT id, name, description FROM todo_app.boards ORDER BY id ASC"
-);
-
-if (!$board_result) {
-    die("Database Error: " . mysqli_error($conn));
-}
-
-while ($board_row = mysqli_fetch_assoc($board_result)) {
-    $boards[] = $board_row;
-}
-
-if ($selected_board_id === 0 && !empty($boards)) {
-    $selected_board_id = (int)$boards[0]["id"];
-}
-
-$selected_board = null;
-
-foreach ($boards as $board_row) {
-    if ((int)$board_row["id"] === $selected_board_id) {
-        $selected_board = $board_row;
-        break;
-    }
-}
-
-if ($selected_board === null && !empty($boards)) {
-    $selected_board_id = (int)$boards[0]["id"];
-    $selected_board = $boards[0];
-}
-
-
-/* =========================================================
    SEARCH / FILTER VALUES
 ========================================================= */
 
@@ -149,21 +61,6 @@ if ($search !== "") {
     $params[] = "%" . $search . "%";
 
     $types .= "s";
-
-}
-
-
-/* =========================================================
-   PROGRESS FILTER
-========================================================= */
-
-if ($selected_board_id > 0) {
-
-    $where[] = "board_id = ?";
-
-    $params[] = $selected_board_id;
-
-    $types .= "i";
 
 }
 
@@ -206,7 +103,6 @@ if (!empty($where)) {
 $sql = "
     SELECT
         id,
-        board_id,
         task,
         description,
         status,
@@ -215,7 +111,7 @@ $sql = "
         is_completed,
         addedDate,
         editedDate
-    FROM todo_app.tasks
+    FROM tasks
     $where_sql
     ORDER BY id DESC
 ";
@@ -437,7 +333,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $update_sql = "
-            UPDATE todo_app.tasks
+            UPDATE tasks
             SET
                 progress = ?,
                 editedDate = NOW()
@@ -755,94 +651,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .task-filter select:focus {
         border-color: #86b7fe;
         box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
-    }
-
-
-    .add-board-btn {
-        height: 48px;
-        padding: 0 20px;
-        border-radius: 8px;
-        font-weight: 700;
-    }
-
-
-    .board-list-wrapper {
-        margin-bottom: 18px;
-        padding: 18px;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-    }
-
-
-    .board-list-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-    }
-
-
-    .board-list-title {
-        font-size: 18px;
-        font-weight: 700;
-    }
-
-
-    .board-list-subtitle {
-        margin-top: 3px;
-        color: #6b7280;
-        font-size: 13px;
-    }
-
-
-    .board-list {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto;
-        padding-bottom: 2px;
-    }
-
-
-    .board-list-item {
-        display: inline-flex;
-        align-items: center;
-        min-width: 150px;
-        min-height: 48px;
-        padding: 10px 16px;
-        border: 1px solid #d9dee7;
-        border-radius: 9px;
-        background: #f8fafc;
-        color: #1f2937;
-        text-decoration: none;
-        font-weight: 600;
-        transition: .15s ease;
-    }
-
-
-    .board-list-item:hover {
-        border-color: #1473e6;
-        color: #1473e6;
-    }
-
-
-    .board-list-item.active {
-        background: #1473e6;
-        border-color: #1473e6;
-        color: #ffffff;
-    }
-
-
-    .board-list-item-name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-
-    .board-list-empty {
-        color: #6b7280;
-        padding: 10px 0;
     }
 
 
@@ -2033,8 +1841,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
 
-        .add-task-btn,
-        .add-board-btn {
+        .add-task-btn {
             width: 100%;
         }
 
@@ -2321,62 +2128,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <?php if ($is_admin || $is_user): ?>
 
-            <button
-                type="button"
-                class="btn btn-primary add-board-btn"
-                id="addBoardBtn"
-            >
-                + Add Board
-            </button>
-
-            <button
-                type="button"
-                class="btn btn-primary add-task-btn"
-                id="topAddTaskBtn"
-                data-progress="Todo"
-            >
-                + Add Card/Task
-            </button>
-
-        <?php endif; ?>
-
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     BOARD LIST
-========================================================= -->
-
-<div class="board-list-wrapper">
-
-    <div class="board-list-header">
-        <div>
-            <div class="board-list-title">Boards</div>
-            <div class="board-list-subtitle">Select a board to view its cards/tasks</div>
-        </div>
-    </div>
-
-    <div class="board-list">
-
-        <?php foreach ($boards as $board): ?>
-
             <a
-                href="?board_id=<?= (int)$board["id"] ?>&search=<?= urlencode($search) ?>&progress=<?= urlencode($progress_filter) ?>"
-                class="board-list-item <?= ((int)$board["id"] === $selected_board_id) ? "active" : "" ?>"
+                href="add.php"
+                class="btn btn-primary add-task-btn"
             >
-                <span class="board-list-item-name">
-                    <?= htmlspecialchars($board["name"]) ?>
-                </span>
+
+                + Add Board
+
             </a>
 
-        <?php endforeach; ?>
-
-        <?php if (empty($boards)): ?>
-            <div class="board-list-empty">No boards yet. Click <strong>+ Add Board</strong> to create one.</div>
         <?php endif; ?>
+
 
     </div>
 
@@ -3526,71 +3288,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 <!-- =========================================================
-     ADD BOARD MODAL
-========================================================= -->
-
-<div
-    class="modal fade"
-    id="addBoardModal"
-    tabindex="-1"
-    aria-labelledby="addBoardModalLabel"
-    aria-hidden="true"
->
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addBoardModalLabel">Add Board</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <form method="POST" action="index.php">
-                <div class="modal-body">
-                    <?php if ($board_error !== ""): ?>
-                        <div class="alert alert-danger">
-                            <?= htmlspecialchars($board_error) ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <input type="hidden" name="action" value="create_board">
-
-                    <div class="mb-3">
-                        <label class="form-label">Board Name</label>
-                        <input
-                            type="text"
-                            name="board_name"
-                            class="form-control"
-                            maxlength="255"
-                            placeholder="Enter board name"
-                            required
-                        >
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea
-                            name="board_description"
-                            class="form-control"
-                            rows="4"
-                            placeholder="Enter board description"
-                        ></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Add Board
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
-<!-- =========================================================
      ADD TASK MODAL
 ========================================================= -->
 
@@ -3632,13 +3329,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ></div>
 
             <form id="addTaskForm">
-
-                <input
-                    type="hidden"
-                    name="board_id"
-                    id="addTaskBoardId"
-                    value="<?= (int)$selected_board_id ?>"
-                >
 
                 <div class="mb-3">
 
@@ -6583,23 +6273,6 @@ document.addEventListener(
    ADD / EDIT TASK MODALS
 ========================================================= */
 
-const addBoardModalElement =
-    document.getElementById(
-        "addBoardModal"
-    );
-
-
-let addBoardModal = null;
-
-
-if (addBoardModalElement) {
-    addBoardModal =
-        new bootstrap.Modal(
-            addBoardModalElement
-        );
-}
-
-
 const addTaskModalElement =
     document.getElementById(
         "addTaskModal"
@@ -6661,15 +6334,6 @@ function openAddTaskModal(progress)
     if (form) {
 
         form.reset();
-
-        const boardInput =
-            document.getElementById(
-                "addTaskBoardId"
-            );
-
-        if (boardInput) {
-            boardInput.value = "<?= (int)$selected_board_id ?>";
-        }
 
     }
 
@@ -7022,39 +6686,36 @@ document.addEventListener(
            TOP RIGHT "+ ADD BOARD" BUTTON
         ================================================= */
 
-        const addBoardBtn =
+        const addBtn =
             event.target.closest(
-                "#addBoardBtn"
+                "a.add-task-btn"
             );
 
-        if (addBoardBtn) {
+
+        if (addBtn) {
+
             event.preventDefault();
 
-            if (addBoardModal) {
-                addBoardModal.show();
-            }
 
-            return;
-        }
+            const url =
+                new URL(
+                    addBtn.href,
+                    window.location.href
+                );
 
 
-        /* =================================================
-           TOP RIGHT "+ ADD CARD/TASK" BUTTON
-        ================================================= */
+            const progress =
+                url.searchParams.get(
+                    "progress"
+                ) || "Todo";
 
-        const topAddTaskBtn =
-            event.target.closest(
-                "#topAddTaskBtn"
-            );
-
-        if (topAddTaskBtn) {
-            event.preventDefault();
 
             openAddTaskModal(
-                topAddTaskBtn.dataset.progress || "Todo"
+                progress
             );
 
             return;
+
         }
 
 
