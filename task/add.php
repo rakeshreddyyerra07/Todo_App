@@ -1,3 +1,4 @@
+
 <?php
 
 session_start();
@@ -46,6 +47,58 @@ $progress = "Todo";
 
 
 /* =========================================================
+   BOARD
+========================================================= */
+
+$board_id = (int)($_POST["board_id"] ?? $_GET["board_id"] ?? 0);
+
+
+/* =========================================================
+   GET BOARD INFORMATION
+========================================================= */
+
+$board_name = "";
+
+if ($board_id > 0) {
+
+    $board_sql = "
+        SELECT
+            id,
+            name
+        FROM boards
+        WHERE id = ?
+        LIMIT 1
+    ";
+
+    $board_stmt = $conn->prepare($board_sql);
+
+    if ($board_stmt) {
+
+        $board_stmt->bind_param(
+            "i",
+            $board_id
+        );
+
+        $board_stmt->execute();
+
+        $board_result = $board_stmt->get_result();
+
+        if ($board_result && $board_result->num_rows > 0) {
+
+            $board_row = $board_result->fetch_assoc();
+
+            $board_name = $board_row["name"];
+
+        }
+
+        $board_stmt->close();
+
+    }
+
+}
+
+
+/* =========================================================
    ADD TASK
 ========================================================= */
 
@@ -61,12 +114,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $progress = $_POST["progress"] ?? "Todo";
 
+    $board_id = (int)($_POST["board_id"] ?? 0);
+
 
     /* =====================================================
        VALIDATION
     ===================================================== */
 
-    if (empty($task)) {
+    if ($board_id <= 0) {
+
+        $error = "Please select a board.";
+
+    }
+
+    elseif ($board_name === "") {
+
+        $error = "Selected board does not exist.";
+
+    }
+
+    elseif (empty($task)) {
 
         $error = "Please enter a task.";
 
@@ -100,6 +167,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $sql = "
             INSERT INTO tasks
             (
+                board_id,
                 task,
                 description,
                 status,
@@ -110,6 +178,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             )
             VALUES
             (
+                ?,
                 ?,
                 ?,
                 ?,
@@ -127,7 +196,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($stmt) {
 
             $stmt->bind_param(
-                "ssiss",
+                "ississ",
+                $board_id,
                 $task,
                 $description,
                 $status,
@@ -158,7 +228,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "Task added successfully.";
 
 
-                header("Location: index.php");
+                header(
+                    "Location: index.php?board_id=" .
+                    $board_id
+                );
 
                 exit;
 
@@ -195,7 +268,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         echo json_encode([
             "success" => false,
-            "message" => $error !== "" ? $error : "Failed to add task."
+            "message" => $error !== ""
+                ? $error
+                : "Failed to add task."
         ]);
 
         exit();
@@ -250,7 +325,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div class="card-header bg-primary text-white">
 
                     <h4 class="mb-0">
-                        Add Task
+                        Add Card / Task
                     </h4>
 
                 </div>
@@ -274,11 +349,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <?php endif; ?>
 
 
+                    <?php if ($board_id > 0 && !empty($board_name)): ?>
+
+                        <div class="alert alert-info">
+
+                            <strong>Board:</strong>
+
+                            <?= htmlspecialchars($board_name) ?>
+
+                        </div>
+
+                    <?php endif; ?>
+
+
                     <!-- =================================================
                          FORM
                     ================================================== -->
 
                     <form method="POST">
+
+
+                        <!-- BOARD ID -->
+
+                        <input
+                            type="hidden"
+                            name="board_id"
+                            value="<?= (int)$board_id ?>"
+                        >
 
 
                         <!-- TASK -->
@@ -439,13 +536,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 class="btn btn-primary"
                             >
 
-                                Add Task
+                                Add Card / Task
 
                             </button>
 
 
                             <a
-                                href="index.php"
+                                href="<?= $board_id > 0
+                                    ? 'index.php?board_id=' . (int)$board_id
+                                    : 'index.php'
+                                ?>"
                                 class="btn btn-secondary"
                             >
 
@@ -473,3 +573,4 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </body>
 
 </html>
+

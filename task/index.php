@@ -31,6 +31,94 @@ $display_role = ucfirst($user_role);
 
 
 /* =========================================================
+   BOARD / CREATE BOARD
+========================================================= */
+
+$selected_board_id = isset($_GET["board_id"]) ? (int)$_GET["board_id"] : 0;
+
+$board_error = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "create_board") {
+
+    if (!($is_admin || $is_user)) {
+        $board_error = "You do not have permission to create a board.";
+    } else {
+        $board_name = trim($_POST["board_name"] ?? "");
+        $board_description = trim($_POST["board_description"] ?? "");
+
+        if ($board_name === "") {
+            $board_error = "Board name is required.";
+        } else {
+            $board_stmt = mysqli_prepare(
+                $conn,
+                "INSERT INTO boards (name, description, created_by) VALUES (?, ?, ?)"
+            );
+
+            if (!$board_stmt) {
+                $board_error = "Database Error: " . mysqli_error($conn);
+            } else {
+                $created_by = (int)$_SESSION["user_id"];
+                mysqli_stmt_bind_param(
+                    $board_stmt,
+                    "ssi",
+                    $board_name,
+                    $board_description,
+                    $created_by
+                );
+
+                if (mysqli_stmt_execute($board_stmt)) {
+                    $new_board_id = mysqli_insert_id($conn);
+                    header("Location: index.php?board_id=" . (int)$new_board_id);
+                    exit();
+                }
+
+                $board_error = "Database Error: " . mysqli_stmt_error($board_stmt);
+                mysqli_stmt_close($board_stmt);
+            }
+        }
+    }
+}
+
+
+/* =========================================================
+   LOAD BOARDS
+========================================================= */
+
+$boards = [];
+
+$board_result = mysqli_query(
+    $conn,
+    "SELECT id, name, description FROM boards ORDER BY id ASC"
+);
+
+if (!$board_result) {
+    die("Database Error: " . mysqli_error($conn));
+}
+
+while ($board_row = mysqli_fetch_assoc($board_result)) {
+    $boards[] = $board_row;
+}
+
+if ($selected_board_id === 0 && !empty($boards)) {
+    $selected_board_id = (int)$boards[0]["id"];
+}
+
+$selected_board = null;
+
+foreach ($boards as $board_row) {
+    if ((int)$board_row["id"] === $selected_board_id) {
+        $selected_board = $board_row;
+        break;
+    }
+}
+
+if ($selected_board === null && !empty($boards)) {
+    $selected_board_id = (int)$boards[0]["id"];
+    $selected_board = $boards[0];
+}
+
+
+/* =========================================================
    SEARCH / FILTER VALUES
 ========================================================= */
 
@@ -61,6 +149,21 @@ if ($search !== "") {
     $params[] = "%" . $search . "%";
 
     $types .= "s";
+
+}
+
+
+/* =========================================================
+   PROGRESS FILTER
+========================================================= */
+
+if ($selected_board_id > 0) {
+
+    $where[] = "board_id = ?";
+
+    $params[] = $selected_board_id;
+
+    $types .= "i";
 
 }
 
@@ -103,6 +206,7 @@ if (!empty($where)) {
 $sql = "
     SELECT
         id,
+        board_id,
         task,
         description,
         status,
@@ -651,6 +755,94 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .task-filter select:focus {
         border-color: #86b7fe;
         box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+    }
+
+
+    .add-board-btn {
+        height: 48px;
+        padding: 0 20px;
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+
+    .board-list-wrapper {
+        margin-bottom: 18px;
+        padding: 18px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+    }
+
+
+    .board-list-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+
+    .board-list-title {
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+
+    .board-list-subtitle {
+        margin-top: 3px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+
+    .board-list {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+
+
+    .board-list-item {
+        display: inline-flex;
+        align-items: center;
+        min-width: 150px;
+        min-height: 48px;
+        padding: 10px 16px;
+        border: 1px solid #d9dee7;
+        border-radius: 9px;
+        background: #f8fafc;
+        color: #1f2937;
+        text-decoration: none;
+        font-weight: 600;
+        transition: .15s ease;
+    }
+
+
+    .board-list-item:hover {
+        border-color: #1473e6;
+        color: #1473e6;
+    }
+
+
+    .board-list-item.active {
+        background: #1473e6;
+        border-color: #1473e6;
+        color: #ffffff;
+    }
+
+
+    .board-list-item-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+
+    .board-list-empty {
+        color: #6b7280;
+        padding: 10px 0;
     }
 
 
@@ -1428,6 +1620,260 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     /* =====================================================
+       TRELLO-STYLE CARD VIEW
+    ===================================================== */
+
+    .trello-card-dialog {
+        max-width: 900px;
+    }
+
+
+    .trello-card-header {
+        align-items: flex-start;
+        padding: 20px 24px 16px;
+    }
+
+
+    .trello-card-header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+
+    .trello-card-eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #61708a;
+    }
+
+
+    .trello-card-modal-title {
+        display: none;
+    }
+
+
+    .trello-card-body {
+        padding: 22px 24px 26px;
+        background: #ffffff;
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+
+
+    .trello-card-layout {
+        display: grid;
+        grid-template-columns: 1fr 230px;
+        gap: 28px;
+        align-items: start;
+    }
+
+
+    .trello-card-main {
+        min-width: 0;
+    }
+
+
+    .trello-card-title-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 22px;
+    }
+
+
+    .trello-card-title-icon {
+        font-size: 20px;
+        color: #7b8aa3;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+
+
+    .trello-card-title-row .task-detail-title {
+        margin-bottom: 0;
+    }
+
+
+    .trello-card-section {
+        margin-bottom: 26px;
+    }
+
+
+    .trello-card-section:last-child {
+        margin-bottom: 0;
+    }
+
+
+    .trello-card-section-heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 14px;
+        color: #172b4d;
+        margin-bottom: 10px;
+    }
+
+
+    .trello-card-section-heading-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+
+    .trello-card-section-heading-row .trello-card-section-heading {
+        margin-bottom: 0;
+    }
+
+
+    .trello-comment-composer {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+
+    .trello-comment-composer-input {
+        flex: 1;
+        min-width: 0;
+    }
+
+
+    .trello-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #dfe6f0;
+        color: #52627a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 16px;
+    }
+
+
+    /* =====================================================
+       SIDEBAR
+    ===================================================== */
+
+    .trello-card-sidebar {
+        border-left: 1px solid #e5eaf1;
+        padding-left: 20px;
+    }
+
+
+    .trello-sidebar-label {
+        font-size: 11px;
+        font-weight: 800;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 12px;
+    }
+
+
+    .trello-sidebar-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+
+
+    .trello-sidebar-item-label {
+        font-size: 11px;
+        color: #8a96a8;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+
+    .trello-sidebar-divider {
+        height: 1px;
+        background: #e5eaf1;
+        margin: 6px 0 16px;
+    }
+
+
+    .trello-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+        background: #e8f1ff;
+        color: #1261b5;
+    }
+
+
+    .trello-chip-date {
+        background: #f1f3f5;
+        color: #495057;
+        font-weight: 600;
+        font-size: 12.5px;
+    }
+
+
+    .trello-chip.complete {
+        background: #d6eadd;
+        color: #246044;
+    }
+
+
+    .trello-chip.incomplete {
+        background: #f8d7da;
+        color: #a42835;
+    }
+
+
+    .trello-chip.status-active {
+        background: #d6eadd;
+        color: #246044;
+    }
+
+
+    .trello-chip.status-inactive {
+        background: #f8d7da;
+        color: #a42835;
+    }
+
+
+    @media (max-width: 767px) {
+
+        .trello-card-layout {
+            grid-template-columns: 1fr;
+        }
+
+
+        .trello-card-sidebar {
+            border-left: none;
+            border-top: 1px solid #e5eaf1;
+            padding-left: 0;
+            padding-top: 18px;
+        }
+
+    }
+
+
+    /* =====================================================
        DRAG MESSAGES
     ===================================================== */
 
@@ -1587,7 +2033,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
 
-        .add-task-btn {
+        .add-task-btn,
+        .add-board-btn {
             width: 100%;
         }
 
@@ -1874,17 +2321,62 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <?php if ($is_admin || $is_user): ?>
 
-            <a
-                href="add.php"
-                class="btn btn-primary add-task-btn"
+            <button
+                type="button"
+                class="btn btn-primary add-board-btn"
+                id="addBoardBtn"
             >
-
                 + Add Board
+            </button>
 
-            </a>
+            <button
+                type="button"
+                class="btn btn-primary add-task-btn"
+                id="topAddTaskBtn"
+                data-progress="Todo"
+            >
+                + Add Card/Task
+            </button>
 
         <?php endif; ?>
 
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     BOARD LIST
+========================================================= -->
+
+<div class="board-list-wrapper">
+
+    <div class="board-list-header">
+        <div>
+            <div class="board-list-title">Boards</div>
+            <div class="board-list-subtitle">Select a board to view its cards/tasks</div>
+        </div>
+    </div>
+
+    <div class="board-list">
+
+        <?php foreach ($boards as $board): ?>
+
+            <a
+                href="?board_id=<?= (int)$board["id"] ?>&search=<?= urlencode($search) ?>&progress=<?= urlencode($progress_filter) ?>"
+                class="board-list-item <?= ((int)$board["id"] === $selected_board_id) ? "active" : "" ?>"
+            >
+                <span class="board-list-item-name">
+                    <?= htmlspecialchars($board["name"]) ?>
+                </span>
+            </a>
+
+        <?php endforeach; ?>
+
+        <?php if (empty($boards)): ?>
+            <div class="board-list-empty">No boards yet. Click <strong>+ Add Board</strong> to create one.</div>
+        <?php endif; ?>
 
     </div>
 
@@ -2654,7 +3146,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 <!-- =========================================================
-     TASK DETAILS MODAL
+     TASK DETAILS MODAL (TRELLO-STYLE CARD VIEW)
 ========================================================= -->
 
 <div
@@ -2665,21 +3157,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     aria-hidden="true"
 >
 
-<div class="modal-dialog modal-dialog-centered">
+<div class="modal-dialog modal-dialog-centered modal-lg trello-card-dialog">
 
-    <div class="modal-content">
+    <div class="modal-content trello-card-content">
 
 
         <!-- MODAL HEADER -->
 
-        <div class="modal-header">
+        <div class="modal-header trello-card-header">
 
-            <h5
-                class="modal-title"
-                id="taskDetailsModalLabel"
-            >
-                Task Details
-            </h5>
+            <div class="trello-card-header-text">
+
+                <span class="trello-card-eyebrow">
+                    <i class="bi bi-kanban"></i>
+                    Card Details
+                </span>
+
+                <h5
+                    class="modal-title trello-card-modal-title"
+                    id="taskDetailsModalLabel"
+                >
+                    Task Details
+                </h5>
+
+            </div>
 
 
             <button
@@ -2694,269 +3195,310 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <!-- MODAL BODY -->
 
-        <div class="modal-body">
+        <div class="modal-body trello-card-body">
+
+            <div class="trello-card-layout">
 
 
-            <!-- TASK NAME -->
+                <!-- =========================================
+                     MAIN COLUMN
+                ========================================= -->
 
-            <div
-                class="task-detail-title"
-                id="modalTaskTitle"
-            >
-                —
-            </div>
+                <div class="trello-card-main">
 
 
-            <!-- DESCRIPTION -->
+                    <!-- TASK NAME -->
 
-            <div
-                class="task-detail-description empty"
-                id="modalTaskDescription"
-            >
-                No description provided.
-            </div>
+                    <div class="trello-card-title-row">
 
+                        <i class="bi bi-card-heading trello-card-title-icon"></i>
 
-            <!-- DETAILS -->
-
-            <div class="task-detail-grid">
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Task ID
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskId"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Priority
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskPriority"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Progress
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskProgress"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Complete
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskCompleted"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Status
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskStatus"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Added Date &amp; Time
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskAdded"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-                <div class="task-detail-item">
-
-                    <span class="task-detail-label">
-                        Edited Date &amp; Time
-                    </span>
-
-                    <span
-                        class="task-detail-value"
-                        id="modalTaskEdited"
-                    >
-                        —
-                    </span>
-
-                </div>
-
-
-            </div>
-
-
-            <!-- =================================================
-                 COMMENTS
-            ================================================== -->
-
-            <hr class="my-4">
-
-
-            <div class="task-comments-section">
-
-                <h6 class="fw-bold mb-3">
-
-                    <i class="bi bi-chat-left-text"></i>
-
-                    Comments
-
-                </h6>
-
-
-                <div
-                    id="taskCommentsList"
-                    class="task-comments-list"
-                >
-
-                    <div class="text-muted small">
-
-                        Loading comments...
+                        <div
+                            class="task-detail-title"
+                            id="modalTaskTitle"
+                        >
+                            —
+                        </div>
 
                     </div>
 
-                </div>
+
+                    <!-- DESCRIPTION -->
+
+                    <div class="trello-card-section">
+
+                        <div class="trello-card-section-heading">
+                            <i class="bi bi-text-paragraph"></i>
+                            Description
+                        </div>
+
+                        <div
+                            class="task-detail-description empty"
+                            id="modalTaskDescription"
+                        >
+                            No description provided.
+                        </div>
+
+                    </div>
 
 
-                <div class="mt-3">
+                    <!-- =================================================
+                         COMMENTS / ACTIVITY
+                    ================================================== -->
 
-                    <textarea
-                        id="taskCommentInput"
-                        class="form-control"
-                        rows="3"
-                        placeholder="Write a comment..."
-                    ></textarea>
+                    <div class="trello-card-section">
+
+                        <div class="trello-card-section-heading">
+                            <i class="bi bi-chat-left-text"></i>
+                            Activity
+                        </div>
 
 
-                    <div class="d-flex justify-content-end mt-2">
+                        <div class="trello-comment-composer">
 
-                        <button
-                            type="button"
-                            class="btn btn-primary"
-                            id="addCommentButton"
+                            <div class="trello-avatar">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+
+                            <div class="trello-comment-composer-input">
+
+                                <textarea
+                                    id="taskCommentInput"
+                                    class="form-control"
+                                    rows="2"
+                                    placeholder="Write a comment..."
+                                ></textarea>
+
+
+                                <div class="d-flex justify-content-end mt-2">
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-primary btn-sm"
+                                        id="addCommentButton"
+                                    >
+
+                                        <i class="bi bi-send"></i>
+
+                                        Save
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div
+                            id="taskCommentsList"
+                            class="task-comments-list mt-3"
                         >
 
-                            <i class="bi bi-send"></i>
+                            <div class="text-muted small">
 
-                            Add Comment
+                                Loading comments...
 
-                        </button>
+                            </div>
 
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- =================================================
-                 FILES / IMAGES
-            ================================================== -->
-
-            <hr class="my-4">
-
-
-            <div class="task-attachments-section">
-
-                <div class="d-flex justify-content-between align-items-center mb-3">
-
-                    <h6 class="fw-bold mb-0">
-
-                        <i class="bi bi-paperclip"></i>
-
-                        Files &amp; Images
-
-                    </h6>
-
-
-                    <label
-                        for="taskAttachmentInput"
-                        class="btn btn-outline-primary btn-sm"
-                        style="cursor:pointer;"
-                    >
-
-                        <i class="bi bi-upload"></i>
-
-                        Upload
-
-                    </label>
-
-
-                    <input
-                        type="file"
-                        id="taskAttachmentInput"
-                        hidden
-                    >
-
-                </div>
-
-
-                <div
-                    id="taskAttachmentsList"
-                    class="task-attachments-list"
-                >
-
-                    <div class="text-muted small">
-
-                        Loading files...
+                        </div>
 
                     </div>
 
+
+                    <!-- =================================================
+                         FILES / IMAGES
+                    ================================================== -->
+
+                    <div class="trello-card-section">
+
+                        <div class="trello-card-section-heading-row">
+
+                            <div class="trello-card-section-heading">
+                                <i class="bi bi-paperclip"></i>
+                                Attachments
+                            </div>
+
+
+                            <label
+                                for="taskAttachmentInput"
+                                class="btn btn-outline-secondary btn-sm"
+                                style="cursor:pointer;"
+                            >
+
+                                <i class="bi bi-upload"></i>
+
+                                Add
+
+                            </label>
+
+
+                            <input
+                                type="file"
+                                id="taskAttachmentInput"
+                                hidden
+                            >
+
+                        </div>
+
+
+                        <div
+                            id="taskAttachmentsList"
+                            class="task-attachments-list mt-2"
+                        >
+
+                            <div class="text-muted small">
+
+                                Loading files...
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
                 </div>
 
-            </div>
 
+                <!-- =========================================
+                     SIDEBAR COLUMN
+                ========================================= -->
+
+                <div class="trello-card-sidebar">
+
+                    <div class="trello-sidebar-label">
+                        About this card
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            Task ID
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip"
+                            id="modalTaskId"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            Priority
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip"
+                            id="modalTaskPriority"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            Progress
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip"
+                            id="modalTaskProgress"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            Completion
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip"
+                            id="modalTaskCompleted"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            Status
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip"
+                            id="modalTaskStatus"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-divider"></div>
+
+
+                    <div class="trello-sidebar-label">
+                        Dates
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            <i class="bi bi-plus-circle"></i>
+                            Added
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip trello-chip-date"
+                            id="modalTaskAdded"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            <i class="bi bi-pencil"></i>
+                            Last edited
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip trello-chip-date"
+                            id="modalTaskEdited"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
 
         </div>
 
@@ -2980,6 +3522,71 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </div>
 
+</div>
+
+
+<!-- =========================================================
+     ADD BOARD MODAL
+========================================================= -->
+
+<div
+    class="modal fade"
+    id="addBoardModal"
+    tabindex="-1"
+    aria-labelledby="addBoardModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addBoardModalLabel">Add Board</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form method="POST" action="index.php">
+                <div class="modal-body">
+                    <?php if ($board_error !== ""): ?>
+                        <div class="alert alert-danger">
+                            <?= htmlspecialchars($board_error) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <input type="hidden" name="action" value="create_board">
+
+                    <div class="mb-3">
+                        <label class="form-label">Board Name</label>
+                        <input
+                            type="text"
+                            name="board_name"
+                            class="form-control"
+                            maxlength="255"
+                            placeholder="Enter board name"
+                            required
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea
+                            name="board_description"
+                            class="form-control"
+                            rows="4"
+                            placeholder="Enter board description"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Add Board
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 
@@ -3025,6 +3632,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ></div>
 
             <form id="addTaskForm">
+
+                <input
+                    type="hidden"
+                    name="board_id"
+                    id="addTaskBoardId"
+                    value="<?= (int)$selected_board_id ?>"
+                >
 
                 <div class="mb-3">
 
@@ -5969,6 +6583,23 @@ document.addEventListener(
    ADD / EDIT TASK MODALS
 ========================================================= */
 
+const addBoardModalElement =
+    document.getElementById(
+        "addBoardModal"
+    );
+
+
+let addBoardModal = null;
+
+
+if (addBoardModalElement) {
+    addBoardModal =
+        new bootstrap.Modal(
+            addBoardModalElement
+        );
+}
+
+
 const addTaskModalElement =
     document.getElementById(
         "addTaskModal"
@@ -6030,6 +6661,15 @@ function openAddTaskModal(progress)
     if (form) {
 
         form.reset();
+
+        const boardInput =
+            document.getElementById(
+                "addTaskBoardId"
+            );
+
+        if (boardInput) {
+            boardInput.value = "<?= (int)$selected_board_id ?>";
+        }
 
     }
 
@@ -6382,36 +7022,39 @@ document.addEventListener(
            TOP RIGHT "+ ADD BOARD" BUTTON
         ================================================= */
 
-        const addBtn =
+        const addBoardBtn =
             event.target.closest(
-                "a.add-task-btn"
+                "#addBoardBtn"
             );
 
-
-        if (addBtn) {
-
+        if (addBoardBtn) {
             event.preventDefault();
 
+            if (addBoardModal) {
+                addBoardModal.show();
+            }
 
-            const url =
-                new URL(
-                    addBtn.href,
-                    window.location.href
-                );
+            return;
+        }
 
 
-            const progress =
-                url.searchParams.get(
-                    "progress"
-                ) || "Todo";
+        /* =================================================
+           TOP RIGHT "+ ADD CARD/TASK" BUTTON
+        ================================================= */
 
+        const topAddTaskBtn =
+            event.target.closest(
+                "#topAddTaskBtn"
+            );
+
+        if (topAddTaskBtn) {
+            event.preventDefault();
 
             openAddTaskModal(
-                progress
+                topAddTaskBtn.dataset.progress || "Todo"
             );
 
             return;
-
         }
 
 
