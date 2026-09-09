@@ -2,6 +2,9 @@
 
 session_start();
 
+/* Keep AJAX responses clean even if a PHP warning is emitted. */
+ob_start();
+
 require_once __DIR__ . "/../config/database.php";
 
 
@@ -190,6 +193,12 @@ $board_error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "create_board") {
 
+    /* Detect AJAX before doing any database work so every AJAX path returns JSON. */
+    $is_ajax_board_request =
+        (isset($_SERVER["HTTP_X_REQUESTED_WITH"]) &&
+         strtolower($_SERVER["HTTP_X_REQUESTED_WITH"]) === "xmlhttprequest") ||
+        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
+
     if (!($is_admin || $is_user)) {
         $board_error = "You do not have permission to create a board.";
     } else {
@@ -208,6 +217,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
                 $board_error = "Database Error: " . mysqli_error($conn);
             } else {
                 $created_by = (int)$_SESSION["user_id"];
+
                 mysqli_stmt_bind_param(
                     $board_stmt,
                     "ssi",
@@ -218,21 +228,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
 
                 if (mysqli_stmt_execute($board_stmt)) {
                     $new_board_id = mysqli_insert_id($conn);
-
-                    $is_ajax_board_request =
-                        (($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "XMLHttpRequest") ||
-                        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
+                    mysqli_stmt_close($board_stmt);
 
                     if ($is_ajax_board_request) {
+                        /* Clean any unexpected buffered output before sending JSON. */
+                        while (ob_get_level() > 0) {
+                            ob_end_clean();
+                        }
+
                         header("Content-Type: application/json; charset=UTF-8");
-                        echo json_encode([
+
+                        $json = json_encode([
                             "success" => true,
                             "board" => [
                                 "id" => (int)$new_board_id,
                                 "name" => $board_name,
                                 "description" => $board_description
                             ]
-                        ]);
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+
+                        echo ($json !== false)
+                            ? $json
+                            : '{"success":false,"message":"Unable to create a valid JSON response."}';
                         exit();
                     }
 
@@ -244,6 +261,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
                 mysqli_stmt_close($board_stmt);
             }
         }
+    }
+
+    /* AJAX errors must return JSON too; otherwise fetch receives the full HTML page. */
+    if ($is_ajax_board_request) {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        header("Content-Type: application/json; charset=UTF-8");
+        echo json_encode([
+            "success" => false,
+            "message" => $board_error !== "" ? $board_error : "Unable to create board."
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit();
     }
 }
 
@@ -322,8 +353,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "delet
     }
 
     if ($is_ajax_delete_request) {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         header("Content-Type: application/json; charset=UTF-8");
-        echo json_encode($delete_response);
+        echo json_encode($delete_response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit();
     }
 
@@ -731,7 +766,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
 
             $update_ok = mysqli_stmt_execute($update_stmt);
-            mysqli_stmt_close($update_stmt);
 
             if ($update_ok) {
                 $progress_response = [
@@ -740,10 +774,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "progress" => $new_progress
                 ];
             } else {
+                /*
+                 * IMPORTANT: read the statement error BEFORE closing the
+                 * prepared statement. Calling mysqli_stmt_error() after
+                 * mysqli_stmt_close() can lose the real MySQL error.
+                 */
                 $mysql_error = mysqli_stmt_error($update_stmt);
                 $progress_response["message"] = "MySQL error while updating task progress: " . $mysql_error;
                 $progress_response["mysql_error"] = $mysql_error;
             }
+
+            mysqli_stmt_close($update_stmt);
         } else {
             $mysql_error = mysqli_error($conn);
             $progress_response["message"] = "MySQL prepare error while updating task progress: " . $mysql_error;
@@ -8939,7 +8980,11 @@ if (addBoardForm) {
                 data = JSON.parse(raw);
             } catch (e) {
                 console.error("Create board returned non-JSON:", raw);
-                throw new Error("The server returned an invalid response. Please check the PHP error/log.");
+                const preview = raw.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+                throw new Error(
+                    "Invalid server response (HTTP " + response.status + "). " +
+                    (preview ? preview.substring(0, 500) : "The server returned an empty response.")
+                );
             }
 
             if (!response.ok || !data.success) {
