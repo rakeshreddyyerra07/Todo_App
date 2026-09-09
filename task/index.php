@@ -2684,6 +2684,459 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     /* =====================================================
+       SEPARATE ADMIN VIEW TASK SCREEN
+       Used only by Admin -> three dots -> View.
+    ===================================================== */
+
+    .view-task-modal .view-task-dialog {
+        width: calc(100% - 48px);
+        max-width: 1120px;
+        margin: 16px auto;
+    }
+
+    .view-task-modal .view-task-content {
+        border: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 12px 40px rgba(23, 43, 77, .12);
+    }
+
+    .view-task-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 34px 34px 20px;
+        border-bottom: 0;
+    }
+
+    .view-task-heading {
+        margin: 0;
+        color: #142a4c;
+        font-size: 36px;
+        line-height: 1.15;
+        font-weight: 800;
+    }
+
+    .view-task-subtitle {
+        margin-top: 8px;
+        color: #70819b;
+        font-size: 17px;
+    }
+
+    .view-task-back-btn {
+        min-width: 100px;
+        min-height: 50px;
+        border: 1px solid #d6dde7;
+        border-radius: 12px;
+        background: #f5f7f9;
+        color: #253a59;
+        font-size: 16px;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .view-task-back-btn:hover {
+        background: #edf1f5;
+        color: #253a59;
+        border-color: #cbd4df;
+    }
+
+    .view-task-body {
+        padding: 24px 34px 34px;
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+    }
+
+    .view-task-title {
+        margin: 0 0 14px;
+        color: #13284a;
+        font-size: 38px;
+        line-height: 1.2;
+        font-weight: 800;
+        word-break: break-word;
+    }
+
+    .view-task-description-section {
+        margin-bottom: 30px;
+    }
+
+    .view-task-section-heading {
+        margin: 0 0 10px;
+        color: #142a4c;
+        font-size: 20px;
+        line-height: 1.3;
+        font-weight: 700;
+    }
+
+    .view-task-description {
+        color: #5c6f8c;
+        font-size: 18px;
+        line-height: 1.65;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .view-task-fields {
+        border-top: 1px solid #e5eaf1;
+    }
+
+    .view-task-field-row {
+        display: grid;
+        grid-template-columns: 255px minmax(0, 1fr);
+        align-items: center;
+        gap: 20px;
+        min-height: 72px;
+        border-bottom: 1px solid #e5eaf1;
+    }
+
+    .view-task-field-label {
+        color: #203b62;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .view-task-field-value {
+        justify-self: start;
+        color: #536886;
+        font-size: 17px;
+        font-weight: 400;
+    }
+
+    .view-task-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 26px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .view-task-chip.priority {
+        background: #ffc107;
+        color: #111827;
+    }
+
+    .view-task-chip.progress {
+        background: #6c757d;
+        color: #fff;
+    }
+
+    .view-task-chip.completed {
+        padding: 9px 16px;
+        background: #e3f5ea;
+        color: #149447;
+        border: 1px solid #c6ead6;
+        font-size: 15px;
+    }
+
+    .view-task-chip.completed.incomplete {
+        background: #fde8ea;
+        color: #b42332;
+        border-color: #f4c9ce;
+    }
+
+    @media (max-width: 767px) {
+        .view-task-modal .view-task-dialog {
+            width: calc(100% - 16px);
+            margin: 8px auto;
+        }
+
+        .view-task-header {
+            padding: 24px 18px 16px;
+        }
+
+        .view-task-body {
+            padding: 22px 18px 24px;
+        }
+
+        .view-task-heading {
+            font-size: 30px;
+        }
+
+        .view-task-title {
+            font-size: 30px;
+        }
+
+        .view-task-field-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            min-height: 84px;
+            padding: 14px 0;
+        }
+    }
+
+
+    /* =====================================================
+       ADMIN VIEW TASK - SIMPLE DETAIL PAGE STYLE
+       Opens from the Admin -> View action.
+    ===================================================== */
+
+    .task-details-modal.view-task-simple .modal-dialog.trello-card-dialog {
+        width: calc(100% - 48px);
+        max-width: 1120px;
+        margin: 16px auto;
+        max-height: calc(100vh - 32px);
+    }
+
+    .task-details-modal.view-task-simple .trello-card-content {
+        height: auto;
+        max-height: calc(100vh - 32px);
+        border: 0;
+        border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(23, 43, 77, .12);
+        background: #fff;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-header {
+        min-height: 104px;
+        padding: 34px 34px 20px;
+        align-items: flex-start;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-eyebrow {
+        order: 2;
+        font-size: 16px;
+        line-height: 1.4;
+        color: #70819b;
+        letter-spacing: 0;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-modal-title {
+        order: 1;
+        margin: 0;
+        font-size: 36px;
+        line-height: 1.15;
+        font-weight: 800;
+        color: #142a4c;
+    }
+
+    .task-details-modal.view-task-simple .task-details-header-actions {
+        align-items: center;
+        gap: 10px;
+    }
+
+    .task-details-modal.view-task-simple .task-details-edit-btn {
+        display: none !important;
+    }
+
+    .task-details-modal.view-task-simple .task-details-back-btn {
+        min-width: 100px;
+        min-height: 48px;
+        border-radius: 12px;
+        font-size: 16px;
+        border: 1px solid #d6dde7;
+        background: #f5f7f9;
+        color: #253a59;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-body {
+        padding: 28px 34px 34px;
+        overflow-y: auto;
+        background: #fff;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-layout {
+        display: block;
+        min-height: 0;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-title-row {
+        margin: 8px 0 22px;
+        gap: 0;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-title-icon {
+        display: none;
+    }
+
+    .task-details-modal.view-task-simple .task-detail-title {
+        font-size: 38px;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #13284a;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-main > .trello-card-section:first-of-type {
+        margin-bottom: 26px;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-main > .trello-card-section:first-of-type .trello-card-section-heading {
+        margin-bottom: 10px;
+        font-size: 20px;
+        color: #142a4c;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-main > .trello-card-section:first-of-type .task-detail-description {
+        padding: 0;
+        min-height: 0;
+        border: 0;
+        background: transparent;
+        color: #5c6f8c;
+        font-size: 18px;
+        line-height: 1.65;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-main > .trello-card-section:not(:first-of-type) {
+        display: none;
+    }
+
+    .task-details-modal.view-task-simple .trello-card-sidebar {
+        display: block;
+        border-left: 0;
+        border-top: 0;
+        padding: 0;
+        margin-top: 24px;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-label {
+        display: none;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item {
+        display: grid;
+        grid-template-columns: 255px minmax(0, 1fr);
+        align-items: center;
+        column-gap: 20px;
+        min-height: 72px;
+        margin: 0;
+        padding: 0;
+        border-top: 1px solid #e5eaf1;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:last-child {
+        border-bottom: 1px solid #e5eaf1;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item-label {
+        font-size: 18px;
+        font-weight: 700;
+        color: #203b62;
+        letter-spacing: 0;
+    }
+
+    .task-details-modal.view-task-simple .task-detail-value.trello-chip {
+        justify-self: start;
+        min-height: 0;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 700;
+        background: #eef1f4;
+        color: #596775;
+    }
+
+    .task-details-modal.view-task-simple #modalTaskPriority {
+        background: #ffc107;
+        color: #111827;
+    }
+
+    .task-details-modal.view-task-simple #modalTaskProgress {
+        background: #6c757d;
+        color: #fff;
+    }
+
+    .task-details-modal.view-task-simple #modalTaskCompleted.complete {
+        background: #e3f5ea;
+        color: #149447;
+        border: 1px solid #c6ead6;
+        padding: 9px 16px;
+        font-size: 15px;
+    }
+
+    .task-details-modal.view-task-simple #modalTaskCompleted.incomplete {
+        background: #fde8ea;
+        color: #b42332;
+        border: 1px solid #f4c9ce;
+        padding: 9px 16px;
+        font-size: 15px;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskBoardName) {
+        display: none;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskProgressBoardName) #modalTaskProgressBoardName {
+        display: none !important;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-divider {
+        display: none;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskAdded),
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskEdited) {
+        min-height: 70px;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskAdded) .task-detail-value,
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskEdited) .task-detail-value {
+        background: transparent;
+        color: #536886;
+        padding: 0;
+        font-size: 16px;
+        font-weight: 400;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskAdded) .trello-sidebar-item-label,
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskEdited) .trello-sidebar-item-label {
+        font-size: 18px;
+    }
+
+    .task-details-modal.view-task-simple .trello-sidebar-item:has(#modalTaskCompleted) {
+        display: grid;
+    }
+
+    .task-details-modal.view-task-simple .task-details-edit-footer {
+        display: none !important;
+    }
+
+    .task-details-modal.view-task-simple .task-detail-select {
+        display: none !important;
+    }
+
+    @media (max-width: 767px) {
+        .task-details-modal.view-task-simple .modal-dialog.trello-card-dialog {
+            width: calc(100% - 16px);
+            margin: 8px auto;
+            max-height: calc(100vh - 16px);
+        }
+
+        .task-details-modal.view-task-simple .trello-card-header {
+            min-height: 94px;
+            padding: 24px 18px 16px;
+        }
+
+        .task-details-modal.view-task-simple .trello-card-body {
+            padding: 22px 18px 24px;
+        }
+
+        .task-details-modal.view-task-simple .trello-card-modal-title {
+            font-size: 30px;
+        }
+
+        .task-details-modal.view-task-simple .task-detail-title {
+            font-size: 30px;
+        }
+
+        .task-details-modal.view-task-simple .trello-sidebar-item {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            min-height: 84px;
+            padding: 14px 0;
+        }
+    }
+
+    /* =====================================================
        CARD DETAILS UI - POLISHED LAYOUT
        Additive styling only: existing board/card functionality
        and existing element IDs are preserved.
@@ -2980,14 +3433,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         text-align: left;
     }
 
-    .task-details-modal .trello-chip.complete,
-    .task-details-modal .trello-chip.status-active {
+    .task-details-modal .trello-chip.complete {
         background: #d9eee2;
         color: #246044;
     }
 
-    .task-details-modal .trello-chip.incomplete,
-    .task-details-modal .trello-chip.status-inactive {
+    .task-details-modal .trello-chip.incomplete {
         background: #f9e0e3;
         color: #a42835;
     }
@@ -4318,15 +4769,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="trello-card-header-text">
 
                 <span class="trello-card-eyebrow">
-                    <i class="bi bi-kanban"></i>
-                    Card Details
+                    Task details
                 </span>
 
                 <h5
                     class="modal-title trello-card-modal-title"
                     id="taskDetailsModalLabel"
                 >
-                    Task Details
+                    View Task
                 </h5>
 
             </div>
@@ -4754,6 +5204,88 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 <!-- =========================================================
+     VIEW TASK MODAL (ADMIN -> VIEW)
+     Separate from the Trello-style Card Details modal.
+========================================================= -->
+
+<div
+    class="modal fade view-task-modal"
+    id="viewTaskModal"
+    tabindex="-1"
+    aria-labelledby="viewTaskModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered modal-xl view-task-dialog">
+        <div class="modal-content view-task-content">
+
+            <div class="view-task-header">
+                <div>
+                    <h2 id="viewTaskModalLabel" class="view-task-heading">View Task</h2>
+                    <div class="view-task-subtitle">Task details</div>
+                </div>
+
+                <button
+                    type="button"
+                    class="btn btn-light view-task-back-btn"
+                    data-bs-dismiss="modal"
+                >
+                    <i class="bi bi-arrow-left"></i>
+                    Back
+                </button>
+            </div>
+
+            <div class="view-task-body">
+
+                <h1 id="viewTaskTitle" class="view-task-title">—</h1>
+
+                <div class="view-task-description-section">
+                    <h3 class="view-task-section-heading">Description</h3>
+                    <div id="viewTaskDescription" class="view-task-description">
+                        No description provided.
+                    </div>
+                </div>
+
+                <div class="view-task-fields">
+
+                    <div class="view-task-field-row">
+                        <div class="view-task-field-label">Priority</div>
+                        <div id="viewTaskPriority" class="view-task-field-value view-task-chip priority">—</div>
+                    </div>
+
+                    <div class="view-task-field-row">
+                        <div class="view-task-field-label">Progress</div>
+                        <div id="viewTaskProgress" class="view-task-field-value view-task-chip progress">—</div>
+                    </div>
+
+                    <div class="view-task-field-row">
+                        <div class="view-task-field-label">Status</div>
+                        <div id="viewTaskStatus" class="view-task-field-value view-task-chip status">—</div>
+                    </div>
+
+                    <div class="view-task-field-row">
+                        <div class="view-task-field-label">Complete</div>
+                        <div id="viewTaskCompleted" class="view-task-field-value view-task-chip completed">—</div>
+                    </div>
+
+                    <div class="view-task-field-row">
+                        <div class="view-task-field-label">Added Date &amp; Time</div>
+                        <div id="viewTaskAdded" class="view-task-field-value view-task-date">—</div>
+                    </div>
+
+                    <div class="view-task-field-row">
+                        <div class="view-task-field-label">Edited Date &amp; Time</div>
+                        <div id="viewTaskEdited" class="view-task-field-value view-task-date">—</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- =========================================================
      ADD BOARD MODAL
 ========================================================= -->
 
@@ -5170,6 +5702,25 @@ if (taskDetailsModalElement) {
     taskDetailsModal =
         new bootstrap.Modal(
             taskDetailsModalElement
+        );
+
+}
+
+
+const viewTaskModalElement =
+    document.getElementById(
+        "viewTaskModal"
+    );
+
+
+let viewTaskModal = null;
+
+
+if (viewTaskModalElement) {
+
+    viewTaskModal =
+        new bootstrap.Modal(
+            viewTaskModalElement
         );
 
 }
@@ -5999,7 +6550,6 @@ function openTaskDetails(card)
     const taskCompleted =
         card.dataset.taskCompleted || "—";
 
-
     const taskAdded =
         card.dataset.taskAdded || "—";
 
@@ -6061,7 +6611,6 @@ function openTaskDetails(card)
         "modalTaskCompleted",
         taskCompleted === "Complete" ? "Completed" : "Incomplete"
     );
-
 
     setModalValue(
         "modalTaskAdded",
@@ -6237,9 +6786,11 @@ function openTaskDetails(card)
 
 
     /* =====================================================
-       SHOW MODAL
+       SHOW TRELLO-STYLE CARD DETAILS
+       (separate from the Admin -> View screen)
     ===================================================== */
 
+    taskDetailsModalElement.classList.remove("view-task-simple");
     taskDetailsModal.show();
 
 }
@@ -6818,6 +7369,68 @@ document.addEventListener(
 
 
 /* =========================================================
+   OPEN SEPARATE VIEW TASK DETAILS
+   Used only by the Admin -> View menu item.
+========================================================= */
+
+function openViewTask(card)
+{
+    if (!card || !viewTaskModal) {
+        return;
+    }
+
+    const title = card.dataset.taskTitle || "—";
+    const description = card.dataset.taskDescription || "";
+    const priority = card.dataset.taskPriority || "—";
+    const progress = card.dataset.taskProgress || "—";
+    const status = card.dataset.taskStatus || "—";
+    const completed = card.dataset.taskCompleted || "Incomplete";
+    const added = card.dataset.taskAdded || "—";
+    const edited = card.dataset.taskEdited || "—";
+
+    const titleElement = document.getElementById("viewTaskTitle");
+    const descriptionElement = document.getElementById("viewTaskDescription");
+    const priorityElement = document.getElementById("viewTaskPriority");
+    const progressElement = document.getElementById("viewTaskProgress");
+    const statusElement = document.getElementById("viewTaskStatus");
+    const completedElement = document.getElementById("viewTaskCompleted");
+    const addedElement = document.getElementById("viewTaskAdded");
+    const editedElement = document.getElementById("viewTaskEdited");
+
+    if (titleElement) titleElement.textContent = title;
+
+    if (descriptionElement) {
+        descriptionElement.textContent =
+            description.trim() !== ""
+                ? description
+                : "No description provided.";
+    }
+
+    if (priorityElement) priorityElement.textContent = priority;
+    if (progressElement) progressElement.textContent = progress;
+    if (statusElement) statusElement.textContent = status;
+    if (addedElement) addedElement.textContent = added;
+    if (editedElement) editedElement.textContent = edited;
+
+    if (completedElement) {
+        completedElement.textContent =
+            completed === "Complete" ? "Complete" : "Incomplete";
+
+        completedElement.classList.toggle(
+            "incomplete",
+            completed !== "Complete"
+        );
+    }
+
+    if (taskDetailsModal && taskDetailsModalElement.classList.contains("show")) {
+        taskDetailsModal.hide();
+    }
+
+    viewTaskModal.show();
+}
+
+
+/* =========================================================
    VIEW TASK FROM ADMIN THREE-DOT MENU
 ========================================================= */
 
@@ -6841,7 +7454,7 @@ document.addEventListener(
         });
 
         if (card) {
-            openTaskDetails(card);
+            openViewTask(card);
         }
     }
 );
