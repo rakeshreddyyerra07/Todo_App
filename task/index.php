@@ -3436,29 +3436,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <?php endif; ?>
 
 
-                <div class="task-menu">
+                <?php if ($is_admin): ?>
 
-                    <button
-                        type="button"
-                        class="task-menu-button"
-                        aria-label="Task menu"
-                    >
-                        ⋮
-                    </button>
+                    <div class="task-menu">
 
-
-                    <div class="task-menu-content">
-
-
-                        <a
-                            href="view.php?id=<?= (int)$task["id"] ?>"
-                            class="view-link"
+                        <button
+                            type="button"
+                            class="task-menu-button"
+                            aria-label="Task menu"
                         >
-                            View
-                        </a>
+                            ⋮
+                        </button>
 
+                        <div class="task-menu-content">
 
-                        <?php if ($is_admin): ?>
+                            <a
+                                href="#"
+                                class="task-view-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                View
+                            </a>
 
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
@@ -3468,11 +3466,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 Delete
                             </a>
 
-                        <?php endif; ?>
+                        </div>
 
                     </div>
 
-                </div>
+                <?php endif; ?>
 
 
             </div>
@@ -3630,29 +3628,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <?php endif; ?>
 
 
-                <div class="task-menu">
+                <?php if ($is_admin): ?>
 
-                    <button
-                        type="button"
-                        class="task-menu-button"
-                        aria-label="Task menu"
-                    >
-                        ⋮
-                    </button>
+                    <div class="task-menu">
 
-
-                    <div class="task-menu-content">
-
-
-                        <a
-                            href="view.php?id=<?= (int)$task["id"] ?>"
-                            class="view-link"
+                        <button
+                            type="button"
+                            class="task-menu-button"
+                            aria-label="Task menu"
                         >
-                            View
-                        </a>
+                            ⋮
+                        </button>
 
+                        <div class="task-menu-content">
 
-                        <?php if ($is_admin): ?>
+                            <a
+                                href="#"
+                                class="task-view-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                View
+                            </a>
 
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
@@ -3662,11 +3658,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 Delete
                             </a>
 
-                        <?php endif; ?>
+                        </div>
 
                     </div>
 
-                </div>
+                <?php endif; ?>
 
             </div>
 
@@ -3782,26 +3778,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
                     </div>
                 <?php endif; ?>
+                <?php if ($is_admin): ?>
 
-                <div class="task-menu">
-                    <button
-                        type="button"
-                        class="task-menu-button"
-                        aria-label="Task menu"
-                    >
-                        ⋮
-                    </button>
-
-                    <div class="task-menu-content">
-                        <a
-                            href="view.php?id=<?= (int)$task["id"] ?>"
-                            class="view-link"
+                    <div class="task-menu">
+                        <button
+                            type="button"
+                            class="task-menu-button"
+                            aria-label="Task menu"
                         >
-                            View
-                        </a>
+                            ⋮
+                        </button>
 
+                        <div class="task-menu-content">
+                            <a
+                                href="#"
+                                class="task-view-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                View
+                            </a>
 
-                        <?php if ($is_admin): ?>
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
                                 class="delete-link"
@@ -3809,9 +3805,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             >
                                 Delete
                             </a>
-                        <?php endif; ?>
+                        </div>
                     </div>
-                </div>
+
+                <?php endif; ?>
 
             </div>
 
@@ -3968,29 +3965,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <?php endif; ?>
 
 
-                <div class="task-menu">
+                <?php if ($is_admin): ?>
 
-                    <button
-                        type="button"
-                        class="task-menu-button"
-                        aria-label="Task menu"
-                    >
-                        ⋮
-                    </button>
+                    <div class="task-menu">
 
-
-                    <div class="task-menu-content">
-
-
-                        <a
-                            href="view.php?id=<?= (int)$task["id"] ?>"
-                            class="view-link"
+                        <button
+                            type="button"
+                            class="task-menu-button"
+                            aria-label="Task menu"
                         >
-                            View
-                        </a>
+                            ⋮
+                        </button>
 
+                        <div class="task-menu-content">
 
-                        <?php if ($is_admin): ?>
+                            <a
+                                href="#"
+                                class="task-view-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                View
+                            </a>
 
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
@@ -4000,11 +3995,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 Delete
                             </a>
 
-                        <?php endif; ?>
+                        </div>
 
                     </div>
 
-                </div>
+                <?php endif; ?>
 
             </div>
 
@@ -4161,29 +4156,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <?php endif; ?>
 
 
-                <div class="task-menu">
+                <?php if ($is_admin): ?>
 
-                    <button
-                        type="button"
-                        class="task-menu-button"
-                        aria-label="Task menu"
-                    >
-                        ⋮
-                    </button>
+                    <div class="task-menu">
 
-
-                    <div class="task-menu-content">
-
-
-                        <a
-                            href="view.php?id=<?= (int)$task["id"] ?>"
-                            class="view-link"
+                        <button
+                            type="button"
+                            class="task-menu-button"
+                            aria-label="Task menu"
                         >
-                            View
-                        </a>
+                            ⋮
+                        </button>
 
+                        <div class="task-menu-content">
 
-                        <?php if ($is_admin): ?>
+                            <a
+                                href="#"
+                                class="task-view-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                View
+                            </a>
 
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
@@ -4193,11 +4186,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 Delete
                             </a>
 
-                        <?php endif; ?>
+                        </div>
 
                     </div>
 
-                </div>
+                <?php endif; ?>
 
             </div>
 
@@ -6825,6 +6818,36 @@ document.addEventListener(
 
 
 /* =========================================================
+   VIEW TASK FROM ADMIN THREE-DOT MENU
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        const viewLink = event.target.closest(".task-view-link");
+
+        if (!viewLink) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const card = viewLink.closest(".task-card");
+
+        document.querySelectorAll(".task-menu-content.show").forEach(function(menu) {
+            menu.classList.remove("show");
+        });
+
+        if (card) {
+            openTaskDetails(card);
+        }
+    }
+);
+
+
+/* =========================================================
    DELETE TASK (NO PAGE NAVIGATION)
 ========================================================= */
 
@@ -7781,7 +7804,7 @@ function saveTaskProgress(
     formData.append("progress", progress);
     formData.append("board_id", <?= (int)$selected_board_id ?>);
 
-    return fetch("index.php", {
+    return fetch(new URL("index.php", document.baseURI).href, {
         method: "POST",
         headers: {
             "X-Requested-With": "XMLHttpRequest",
@@ -8964,7 +8987,7 @@ if (addBoardForm) {
 
         const formData = new FormData(addBoardForm);
 
-        fetch(addBoardForm.action, {
+        fetch(new URL(addBoardForm.getAttribute("action") || "index.php", document.baseURI).href, {
             method: "POST",
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
@@ -9178,7 +9201,7 @@ document.addEventListener(
             formData.append("action", "delete_board");
             formData.append("board_id", boardId);
 
-            fetch("index.php", {
+            fetch(new URL("index.php", document.baseURI).href, {
                 method: "POST",
                 headers: {
                     "X-Requested-With": "XMLHttpRequest",
