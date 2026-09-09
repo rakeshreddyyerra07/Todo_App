@@ -327,6 +327,54 @@ function getProgressClass($progress)
 
 
         /* =====================================================
+           TASK STATUS
+        ===================================================== */
+
+        .status-active,
+        .status-inactive {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 7px 13px;
+
+            border-radius: 7px;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            white-space: nowrap;
+
+        }
+
+
+        .status-active {
+
+            background: #eaf8ef;
+
+            color: #249150;
+
+            border: 1px solid #d4f4df;
+
+        }
+
+
+        .status-inactive {
+
+            background: #f8d7da;
+
+            color: #a42835;
+
+            border: 1px solid #f1c0c5;
+
+        }
+
+
+        /* =====================================================
            ACTION BUTTON
         ===================================================== */
 
@@ -440,6 +488,19 @@ function getProgressClass($progress)
             background: #e2e6ea;
 
             color: #343a40;
+
+        }
+
+
+        .description-heading-row {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            margin-bottom: 8px;
 
         }
 
@@ -604,7 +665,16 @@ function getProgressClass($progress)
              DESCRIPTION
         ================================================== -->
 
-        <div class="task-description">
+        <div class="description-heading-row">
+
+            <strong>Description</strong>
+
+        </div>
+
+        <div
+            class="task-description"
+            id="viewTaskDescription"
+        >
 
             <?php
 
@@ -629,32 +699,6 @@ function getProgressClass($progress)
 
 
         <!-- =================================================
-             TASK ID
-        ================================================== -->
-
-        <div class="detail-row">
-
-            <div class="detail-label">
-
-                Task ID
-
-            </div>
-
-            <div class="detail-value">
-
-                <?php
-
-                echo (int)$task["id"];
-
-                ?>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- =================================================
              PRIORITY
         ================================================== -->
 
@@ -670,6 +714,7 @@ function getProgressClass($progress)
 
                 <span
                     class="badge <?php echo getPriorityClass($task["priority"]); ?>"
+                    id="viewTaskPriority"
                 >
 
                     <?php
@@ -704,6 +749,7 @@ function getProgressClass($progress)
 
                 <span
                     class="badge <?php echo getProgressClass($task["progress"]); ?>"
+                    id="viewTaskProgress"
                 >
 
                     <?php
@@ -738,7 +784,10 @@ function getProgressClass($progress)
 
                 <?php if ((int)$task["is_completed"] === 1): ?>
 
-                    <span class="complete-status completed">
+                    <span
+                        class="complete-status completed"
+                        id="viewTaskCompleted"
+                    >
 
                         Complete
 
@@ -746,7 +795,10 @@ function getProgressClass($progress)
 
                 <?php else: ?>
 
-                    <span class="complete-status incomplete">
+                    <span
+                        class="complete-status incomplete"
+                        id="viewTaskCompleted"
+                    >
 
                         Incomplete
 
@@ -872,48 +924,12 @@ function getProgressClass($progress)
 
 
 
-        <!-- =================================================
-             ONLY COMPLETE / INCOMPLETE BUTTON
-        ================================================== -->
-
-        <div class="task-actions">
-
-            <?php if ((int)$task["is_completed"] === 1): ?>
-
-                <!-- TASK IS COMPLETE -->
-
-                <a
-                    href="toggle_complete.php?id=<?php echo (int)$task["id"]; ?>"
-                    class="task-btn btn-incomplete"
-                    onclick="return confirm('Mark this task as incomplete?');"
-                >
-
-                    ↩ Mark Incomplete
-
-                </a>
-
-            <?php else: ?>
-
-                <!-- TASK IS INCOMPLETE -->
-
-                <a
-                    href="toggle_complete.php?id=<?php echo (int)$task["id"]; ?>"
-                    class="task-btn btn-complete"
-                    onclick="return confirm('Mark this task as completed?');"
-                >
-
-                    ✓ Mark Complete
-
-                </a>
-
-            <?php endif; ?>
-
-        </div>
-
 
     </div>
 
 </main>
+
+
 
 
 </body>

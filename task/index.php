@@ -31,6 +31,156 @@ $display_role = ucfirst($user_role);
 
 
 /* =========================================================
+   AJAX: UPDATE TASK FIELD
+   (PRIORITY / PROGRESS / COMPLETION / DESCRIPTION)
+   BOTH ADMIN AND USER ARE ALLOWED
+========================================================= */
+
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST" &&
+    ($_POST["action"] ?? "") === "update_task_field"
+) {
+
+    header("Content-Type: application/json");
+
+    if (!($is_admin || $is_user)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "You do not have permission to edit this task."
+        ]);
+        exit();
+    }
+
+    $task_id = (int)($_POST["task_id"] ?? 0);
+    $field   = $_POST["field"] ?? "";
+    $value   = $_POST["value"] ?? "";
+
+    $allowed_fields = [
+        "priority",
+        "progress",
+        "is_completed",
+        "description"
+    ];
+
+    if ($task_id <= 0 || !in_array($field, $allowed_fields, true)) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Invalid request."
+        ]);
+        exit();
+    }
+
+    $bind_type  = "s";
+    $bind_value = $value;
+
+    if ($field === "priority") {
+
+        $allowed_priority = ["High", "Medium", "Low"];
+
+        if (!in_array($value, $allowed_priority, true)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Invalid priority value."
+            ]);
+            exit();
+        }
+
+    } elseif ($field === "progress") {
+
+        $allowed_progress = ["Todo", "In Progress", "Pending", "Review", "Done"];
+
+        if (!in_array($value, $allowed_progress, true)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Invalid progress value."
+            ]);
+            exit();
+        }
+
+    } elseif ($field === "is_completed") {
+
+        $bind_value = ((int)$value === 1) ? 1 : 0;
+        $bind_type  = "i";
+
+    } elseif ($field === "description") {
+
+        $bind_value = trim($value);
+
+    }
+
+    $update_sql = "
+        UPDATE tasks
+        SET
+            {$field} = ?,
+            editedDate = NOW()
+        WHERE id = ?
+    ";
+
+    $update_stmt = mysqli_prepare($conn, $update_sql);
+
+    if (!$update_stmt) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Database error."
+        ]);
+        exit();
+    }
+
+    mysqli_stmt_bind_param(
+        $update_stmt,
+        $bind_type . "i",
+        $bind_value,
+        $task_id
+    );
+
+    $update_ok = mysqli_stmt_execute($update_stmt);
+
+    mysqli_stmt_close($update_stmt);
+
+    if (!$update_ok) {
+        echo json_encode([
+            "success" => false,
+            "message" => "Update failed."
+        ]);
+        exit();
+    }
+
+    $edited_display = "";
+
+    $edited_stmt = mysqli_prepare(
+        $conn,
+        "SELECT editedDate FROM tasks WHERE id = ?"
+    );
+
+    if ($edited_stmt) {
+
+        mysqli_stmt_bind_param($edited_stmt, "i", $task_id);
+        mysqli_stmt_execute($edited_stmt);
+
+        $edited_result = mysqli_stmt_get_result($edited_stmt);
+        $edited_row = $edited_result ? mysqli_fetch_assoc($edited_result) : null;
+
+        if ($edited_row) {
+            $edited_display = formatTaskDate($edited_row["editedDate"]);
+        }
+
+        mysqli_stmt_close($edited_stmt);
+
+    }
+
+    echo json_encode([
+        "success" => true,
+        "field"   => $field,
+        "value"   => $bind_value,
+        "edited"  => $edited_display
+    ]);
+
+    exit();
+
+}
+
+
+/* =========================================================
    BOARD / CREATE BOARD
 ========================================================= */
 
@@ -68,6 +218,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
 
                 if (mysqli_stmt_execute($board_stmt)) {
                     $new_board_id = mysqli_insert_id($conn);
+
+                    $is_ajax_board_request =
+                        (($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "XMLHttpRequest") ||
+                        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
+
+                    if ($is_ajax_board_request) {
+                        header("Content-Type: application/json; charset=UTF-8");
+                        echo json_encode([
+                            "success" => true,
+                            "board" => [
+                                "id" => (int)$new_board_id,
+                                "name" => $board_name,
+                                "description" => $board_description
+                            ]
+                        ]);
+                        exit();
+                    }
+
                     header("Location: index.php?board_id=" . (int)$new_board_id);
                     exit();
                 }
@@ -77,6 +245,94 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "creat
             }
         }
     }
+}
+
+
+/* =========================================================
+   BOARD / DELETE BOARD
+   A board can be deleted only when it has no tasks.
+========================================================= */
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && ($_POST["action"] ?? "") === "delete_board") {
+
+    $delete_board_id = (int)($_POST["board_id"] ?? 0);
+    $is_ajax_delete_request =
+        (($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "XMLHttpRequest") ||
+        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
+
+    $delete_response = ["success" => false];
+
+    if (!($is_admin || $is_user)) {
+        $delete_response["message"] = "You do not have permission to delete a board.";
+    }
+    elseif ($delete_board_id <= 0) {
+        $delete_response["message"] = "Invalid board.";
+    }
+    else {
+
+        /* Do not silently delete tasks belonging to the board. */
+        $task_count_stmt = mysqli_prepare(
+            $conn,
+            "SELECT COUNT(*) AS task_count FROM tasks WHERE board_id = ?"
+        );
+
+        if (!$task_count_stmt) {
+            $delete_response["message"] = "Database Error: " . mysqli_error($conn);
+        }
+        else {
+            mysqli_stmt_bind_param($task_count_stmt, "i", $delete_board_id);
+            mysqli_stmt_execute($task_count_stmt);
+            $task_count_result = mysqli_stmt_get_result($task_count_stmt);
+            $task_count_row = $task_count_result ? mysqli_fetch_assoc($task_count_result) : null;
+            $task_count = (int)($task_count_row["task_count"] ?? 0);
+            mysqli_stmt_close($task_count_stmt);
+
+            if ($task_count > 0) {
+                $delete_response["message"] =
+                    "This board cannot be deleted because it contains " .
+                    $task_count .
+                    " task" . ($task_count === 1 ? "" : "s") .
+                    ". Move or delete the tasks first.";
+            }
+            else {
+                $delete_stmt = mysqli_prepare(
+                    $conn,
+                    "DELETE FROM boards WHERE id = ?"
+                );
+
+                if (!$delete_stmt) {
+                    $delete_response["message"] = "Database Error: " . mysqli_error($conn);
+                }
+                else {
+                    mysqli_stmt_bind_param($delete_stmt, "i", $delete_board_id);
+
+                    if (mysqli_stmt_execute($delete_stmt) && mysqli_stmt_affected_rows($delete_stmt) > 0) {
+                        $delete_response["success"] = true;
+                        $delete_response["board_id"] = $delete_board_id;
+                    }
+                    else {
+                        $delete_response["message"] =
+                            mysqli_stmt_error($delete_stmt) ?: "Board not found or could not be deleted.";
+                    }
+
+                    mysqli_stmt_close($delete_stmt);
+                }
+            }
+        }
+    }
+
+    if ($is_ajax_delete_request) {
+        header("Content-Type: application/json; charset=UTF-8");
+        echo json_encode($delete_response);
+        exit();
+    }
+
+    if (!empty($delete_response["success"])) {
+        header("Location: index.php");
+        exit();
+    }
+
+    $board_error = $delete_response["message"] ?? "Unable to delete board.";
 }
 
 
@@ -270,6 +526,8 @@ $todo_tasks = [];
 
 $in_progress_tasks = [];
 
+$pending_tasks = [];
+
 $review_tasks = [];
 
 $done_tasks = [];
@@ -286,6 +544,12 @@ while ($row = mysqli_fetch_assoc($result)) {
     elseif ($row["progress"] === "In Progress") {
 
         $in_progress_tasks[] = $row;
+
+    }
+
+    elseif ($row["progress"] === "Pending") {
+
+        $pending_tasks[] = $row;
 
     }
 
@@ -356,6 +620,11 @@ function getProgressClass($progress)
             return "progress-progress";
 
 
+        case "Pending":
+
+            return "progress-pending";
+
+
         case "Review":
 
             return "progress-review";
@@ -422,10 +691,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $allowed_progress = [
         "Todo",
         "In Progress",
+        "Pending",
         "Review",
         "Done"
     ];
 
+
+    $is_ajax_progress_request =
+        (($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "XMLHttpRequest") ||
+        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
+
+    $progress_response = ["success" => false];
 
     if (
         $task_id > 0 &&
@@ -444,15 +720,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             WHERE id = ?
         ";
 
-
-        $update_stmt = mysqli_prepare(
-            $conn,
-            $update_sql
-        );
-
+        $update_stmt = mysqli_prepare($conn, $update_sql);
 
         if ($update_stmt) {
-
             mysqli_stmt_bind_param(
                 $update_stmt,
                 "si",
@@ -460,23 +730,45 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $task_id
             );
 
+            $update_ok = mysqli_stmt_execute($update_stmt);
+            mysqli_stmt_close($update_stmt);
 
-            mysqli_stmt_execute(
-                $update_stmt
-            );
-
-
-            mysqli_stmt_close(
-                $update_stmt
-            );
-
+            if ($update_ok) {
+                $progress_response = [
+                    "success" => true,
+                    "task_id" => $task_id,
+                    "progress" => $new_progress
+                ];
+            } else {
+                $mysql_error = mysqli_stmt_error($update_stmt);
+                $progress_response["message"] = "MySQL error while updating task progress: " . $mysql_error;
+                $progress_response["mysql_error"] = $mysql_error;
+            }
+        } else {
+            $mysql_error = mysqli_error($conn);
+            $progress_response["message"] = "MySQL prepare error while updating task progress: " . $mysql_error;
+            $progress_response["mysql_error"] = $mysql_error;
         }
-
+    } else {
+        $progress_response["message"] = "Invalid task or progress value.";
     }
 
+    if ($is_ajax_progress_request) {
+        header("Content-Type: application/json; charset=UTF-8");
+        echo json_encode($progress_response);
+        exit();
+    }
+
+    if (!empty($progress_response["success"])) {
+        $redirect_board_id = (int)($_POST["board_id"] ?? 0);
+        header(
+            "Location: index.php" .
+            ($redirect_board_id > 0 ? "?board_id=" . $redirect_board_id : "")
+        );
+        exit();
+    }
 
     header("Location: index.php");
-
     exit();
 
 }
@@ -766,85 +1058,154 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
-    .board-list-wrapper {
-        margin-bottom: 18px;
-        padding: 18px;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-    }
+    /* =====================================================
+       BOARD COLUMN CARDS
+    ===================================================== */
 
-
-    .board-list-header {
+    .board-card-list {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-    }
-
-
-    .board-list-title {
-        font-size: 18px;
-        font-weight: 700;
-    }
-
-
-    .board-list-subtitle {
-        margin-top: 3px;
-        color: #6b7280;
-        font-size: 13px;
-    }
-
-
-    .board-list {
-        display: flex;
+        flex-direction: column;
         gap: 10px;
-        overflow-x: auto;
-        padding-bottom: 2px;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 2px;
     }
 
+    /* BOARD CARDS USE THE SAME VISUAL LANGUAGE AS TASK CARDS */
+    .board-card {
+        position: relative;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 0;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        border: 1px solid #dbe1e9;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        color: #172b4d;
+        text-decoration: none;
+        min-height: 76px;
+    }
 
-    .board-list-item {
+    .board-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 13px rgba(0,0,0,0.10);
+    }
+
+    .board-card.active {
+        box-shadow: 0 0 0 2px rgba(105,65,165,0.18), 0 5px 13px rgba(0,0,0,0.10);
+        border-color: #6941a5;
+    }
+
+    .board-card-name {
+        font-weight: 800;
+        font-size: 14px;
+        color: #172b4d;
+        padding-right: 36px;
+        word-break: break-word;
+        line-height: 1.4;
+    }
+
+    .board-card-description {
+        font-size: 13px;
+        color: #52627a;
+        margin-top: 5px;
+        padding-right: 8px;
+        word-break: break-word;
+        line-height: 1.4;
+    }
+
+    .board-card-menu {
+        position: absolute;
+        top: 9px;
+        right: 9px;
+        z-index: 5;
+    }
+
+    .board-card-menu-button {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #d6deea;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #52627a;
         display: inline-flex;
         align-items: center;
-        min-width: 150px;
-        min-height: 48px;
-        padding: 10px 16px;
-        border: 1px solid #d9dee7;
-        border-radius: 9px;
-        background: #f8fafc;
-        color: #1f2937;
-        text-decoration: none;
+        justify-content: center;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .board-card-menu-button:hover {
+        background: #f3f6fa;
+        color: #172b4d;
+        border-color: #bfc9d8;
+    }
+
+    .board-card-menu-content {
+        position: absolute;
+        top: 35px;
+        right: 0;
+        min-width: 120px;
+        background: #ffffff;
+        border: 1px solid #dbe1e9;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+        padding: 5px;
+        display: none;
+    }
+
+    .board-card-menu-content.show {
+        display: block;
+    }
+
+    .board-card-menu-delete {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: #dc3545;
+        text-align: left;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
         font-weight: 600;
-        transition: .15s ease;
     }
 
-
-    .board-list-item:hover {
-        border-color: #1473e6;
-        color: #1473e6;
+    .board-card-menu-delete:hover {
+        background: #fff1f1;
     }
 
-
-    .board-list-item.active {
-        background: #1473e6;
-        border-color: #1473e6;
-        color: #ffffff;
-    }
-
-
-    .board-list-item-name {
+    .task-board-name-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 7px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #f1edfb;
+        color: #6941a5;
+        font-size: 11px;
+        font-weight: 700;
+        max-width: 100%;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
 
-    .board-list-empty {
+    .board-empty {
         color: #6b7280;
-        padding: 10px 0;
+        background: rgba(255,255,255,0.7);
+        border: 1px dashed #cfd7e3;
+        border-radius: 10px;
+        padding: 14px;
+        font-size: 13px;
+        line-height: 1.5;
     }
-
 
     .add-task-btn {
         height: 48px;
@@ -868,16 +1229,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .board-wrapper {
         width: 100%;
+        height: calc(100vh - 205px);
+        max-height: calc(100vh - 205px);
         overflow-x: auto;
-        padding-bottom: 15px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        overscroll-behavior-x: contain;
+        overscroll-behavior-y: contain;
+        padding: 0 0 15px 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-gutter: stable both-edges;
+        touch-action: pan-x pan-y;
     }
 
 
     .task-board {
         display: grid;
-        grid-template-columns: repeat(4, minmax(260px, 1fr));
+        grid-template-columns: repeat(6, minmax(360px, 360px));
         gap: 18px;
-        min-width: 1050px;
+        width: max-content;
+        min-width: max-content;
+        min-height: calc(100% + 80px);
+        align-items: start;
+        padding-bottom: 20px;
     }
 
 
@@ -886,9 +1260,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ===================================================== */
 
     .task-column {
+        width: 360px;
+        min-width: 360px;
+        max-width: 360px;
         border-radius: 9px;
-        padding: 12px;
-        height: calc(100vh - 265px);
+        padding: 14px;
+        height: calc(100vh - 225px);
         display: flex;
         flex-direction: column;
         transition: 0.2s;
@@ -959,6 +1336,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+    .task-column:nth-child(5) {
+        background: #f4f0fb;
+    }
+
+
+    .task-column:nth-child(5) .column-title {
+        color: #6941a5;
+    }
+
+
+    /* BOARD is the 6th column and must stay after DONE. */
+    .task-column.board-task-column {
+        background: #f7f3ff;
+    }
+
+
+    .task-column.board-task-column .column-title {
+        color: #6941a5;
+    }
+
+
     .column-count {
         font-size: 14px;
         color: #61708a;
@@ -1013,6 +1411,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         overflow-y: auto;
         overflow-x: hidden;
         padding-right: 4px;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
 
@@ -1027,7 +1428,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         padding: 15px;
         margin-bottom: 10px;
         cursor: grab;
-        touch-action: pan-y;
+        touch-action: pan-x pan-y;
         box-shadow: 0 2px 5px rgba(0,0,0,0.08);
         border: 1px solid #dbe1e9;
         transition:
@@ -1856,6 +2257,113 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+    /* =====================================================
+       INLINE FIELD EDITING (VIEW CARD)
+    ===================================================== */
+
+    .task-detail-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+
+    .progress-pending {
+        background: #fff3cd;
+        color: #8a6d1d;
+    }
+
+
+    .task-details-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+
+    .task-details-edit-btn,
+    .task-details-back-btn {
+        min-height: 38px;
+        border-radius: 8px;
+        font-weight: 700;
+        padding: 7px 13px;
+    }
+
+
+    .task-details-edit-footer {
+        justify-content: flex-end;
+    }
+
+
+    .task-details-footer-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        width: 100%;
+    }
+
+
+    .task-details-save-btn,
+    .task-details-cancel-btn {
+        min-width: 96px;
+        min-height: 42px;
+        border-radius: 9px;
+        font-weight: 700;
+    }
+
+
+    .task-field-edit-btn {
+        border: 1px solid #e1e6ed;
+        background: #ffffff;
+        color: #6a7a91;
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+
+    .task-field-edit-btn:hover {
+        background: #f1f3f5;
+        color: #172b4d;
+    }
+
+
+    .task-field-edit-btn.text-edit-btn {
+        width: auto;
+        padding: 4px 10px;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+
+    .task-detail-select {
+        font-size: 13px;
+        font-weight: 700;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #d7dee8;
+        color: #172b4d;
+        background: #ffffff;
+        max-width: 100%;
+    }
+
+
+    .task-field-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin: -14px 0 20px;
+    }
+
+
     @media (max-width: 767px) {
 
         .trello-card-layout {
@@ -1933,8 +2441,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     @media (max-width: 1100px) {
 
         .task-board {
-            grid-template-columns: repeat(2, minmax(280px, 1fr));
-            min-width: 0;
+            /* Keep all six columns in one horizontal row so the
+               outer board can be scrolled left/right on touch. */
+            grid-template-columns: repeat(6, minmax(360px, 360px));
+            width: max-content;
+            min-width: max-content;
         }
 
 
@@ -2041,19 +2552,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         .task-board {
             display: flex;
-            gap: 12px;
+            gap: 14px;
+            width: max-content;
             min-width: max-content;
         }
 
 
         .task-column {
-            width: 285px;
-            min-width: 285px;
+            width: 340px;
+            min-width: 340px;
+            max-width: 340px;
+            height: calc(100vh - 220px);
         }
 
 
         .board-wrapper {
+            height: calc(100vh - 180px);
+            max-height: calc(100vh - 180px);
             overflow-x: auto;
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -2116,8 +2633,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     @media (max-width: 380px) {
 
         .task-column {
-            width: 270px;
-            min-width: 270px;
+            width: 310px;
+            min-width: 310px;
+            max-width: 310px;
         }
 
     }
@@ -2132,7 +2650,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .task-details-modal .modal-dialog.trello-card-dialog {
         width: calc(100% - 32px);
-        max-width: 920px;
+        max-width: 1140px;
         max-height: 92vh;
         margin: 1rem auto;
     }
@@ -2196,8 +2714,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     .task-details-modal .trello-card-layout {
-        grid-template-columns: minmax(0, 1fr) 260px;
-        gap: 34px;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 40px;
         align-items: stretch;
         min-height: 100%;
     }
@@ -2677,6 +3195,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <option
+                        value="Pending"
+                        <?= $progress_filter === "Pending" ? "selected" : "" ?>
+                    >
+                        PENDING
+                    </option>
+
+
+                    <option
                         value="Review"
                         <?= $progress_filter === "Review" ? "selected" : "" ?>
                     >
@@ -2708,54 +3234,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 + Add Board
             </button>
 
-            <button
-                type="button"
-                class="btn btn-primary add-task-btn"
-                id="topAddTaskBtn"
-                data-progress="Todo"
-            >
-                + Add Card/Task
-            </button>
-
         <?php endif; ?>
 
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     BOARD LIST
-========================================================= -->
-
-<div class="board-list-wrapper">
-
-    <div class="board-list-header">
-        <div>
-            <div class="board-list-title">Boards</div>
-            <div class="board-list-subtitle">Select a board to view its cards/tasks</div>
-        </div>
-    </div>
-
-    <div class="board-list">
-
-        <?php foreach ($boards as $board): ?>
-
-            <a
-                href="?board_id=<?= (int)$board["id"] ?>&search=<?= urlencode($search) ?>&progress=<?= urlencode($progress_filter) ?>"
-                class="board-list-item <?= ((int)$board["id"] === $selected_board_id) ? "active" : "" ?>"
-            >
-                <span class="board-list-item-name">
-                    <?= htmlspecialchars($board["name"]) ?>
-                </span>
-            </a>
-
-        <?php endforeach; ?>
-
-        <?php if (empty($boards)): ?>
-            <div class="board-list-empty">No boards yet. Click <strong>+ Add Board</strong> to create one.</div>
-        <?php endif; ?>
 
     </div>
 
@@ -2818,6 +3298,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 data-task-id="<?= (int)$task["id"] ?>"
                 data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-board-name="<?= htmlspecialchars($selected_board["name"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
                 data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
@@ -2832,6 +3313,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <?= htmlspecialchars($task["task"]) ?>
 
                 </div>
+
+                <?php if ($selected_board): ?>
+                    <div class="task-board-name-badge">
+                        <i class="bi bi-kanban"></i>
+                        <?= htmlspecialchars($selected_board["name"]) ?>
+                    </div>
+                <?php endif; ?>
 
 
                 <?php if (!empty($task["description"])): ?>
@@ -2920,13 +3408,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <div class="task-menu-content">
 
-                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+
+                        <a
+                            href="view.php?id=<?= (int)$task["id"] ?>"
+                            class="view-link"
+                        >
                             View
-                        </a>
-
-
-                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
-                            Edit
                         </a>
 
 
@@ -2935,7 +3422,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
                                 class="delete-link"
-                                onclick="return confirm('Are you sure you want to delete this task?');"
+                                data-task-id="<?= (int)$task["id"] ?>"
                             >
                                 Delete
                             </a>
@@ -3017,6 +3504,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 </div>
 
+                <?php if ($selected_board): ?>
+                    <div class="task-board-name-badge">
+                        <i class="bi bi-kanban"></i>
+                        <?= htmlspecialchars($selected_board["name"]) ?>
+                    </div>
+                <?php endif; ?>
+
 
                 <?php if (!empty($task["description"])): ?>
 
@@ -3108,13 +3602,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <div class="task-menu-content">
 
-                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+
+                        <a
+                            href="view.php?id=<?= (int)$task["id"] ?>"
+                            class="view-link"
+                        >
                             View
-                        </a>
-
-
-                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
-                            Edit
                         </a>
 
 
@@ -3123,7 +3616,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
                                 class="delete-link"
-                                onclick="return confirm('Are you sure you want to delete this task?');"
+                                data-task-id="<?= (int)$task["id"] ?>"
                             >
                                 Delete
                             </a>
@@ -3132,6 +3625,151 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     </div>
 
+                </div>
+
+            </div>
+
+        <?php endforeach; ?>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     PENDING
+========================================================= -->
+
+<div
+    class="task-column"
+    data-progress="Pending"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">
+            PENDING
+        </span>
+
+        <span class="column-count">
+            <?= count($pending_tasks) ?>
+        </span>
+
+        <?php if ($is_admin): ?>
+
+            <a
+                href="add.php?progress=Pending"
+                class="column-add-btn"
+                title="Add task to PENDING"
+                aria-label="Add task to PENDING"
+            >
+                <i class="bi bi-plus"></i>
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="task-list">
+
+        <?php foreach ($pending_tasks as $task): ?>
+
+            <div
+                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
+                draggable="true"
+                data-task-id="<?= (int)$task["id"] ?>"
+                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
+                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+            >
+
+                <div class="task-title">
+                    <?= htmlspecialchars($task["task"]) ?>
+                </div>
+
+                <?php if ($selected_board): ?>
+                    <div class="task-board-name-badge">
+                        <i class="bi bi-kanban"></i>
+                        <?= htmlspecialchars($selected_board["name"]) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($task["description"])): ?>
+                    <div class="task-description">
+                        <?= nl2br(htmlspecialchars($task["description"])) ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="task-meta">
+                    <span class="priority-badge">
+                        <?= htmlspecialchars($task["priority"]) ?>
+                    </span>
+
+                    <span
+                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
+                    >
+                        <?= htmlspecialchars($task["progress"]) ?>
+                    </span>
+
+                    <?php if ((int)$task["is_completed"] === 1): ?>
+                        <span class="completion-badge completed">
+                            <i class="bi bi-check-circle-fill"></i>
+                            Completed
+                        </span>
+                    <?php else: ?>
+                        <span class="completion-badge incomplete">
+                            <i class="bi bi-circle"></i>
+                            Incomplete
+                        </span>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!empty($task["editedDate"])): ?>
+                    <div class="task-date">
+                        <i class="bi bi-clock"></i>
+                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
+                    </div>
+                <?php elseif (!empty($task["addedDate"])): ?>
+                    <div class="task-date">
+                        <i class="bi bi-clock"></i>
+                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="task-menu">
+                    <button
+                        type="button"
+                        class="task-menu-button"
+                        aria-label="Task menu"
+                    >
+                        ⋮
+                    </button>
+
+                    <div class="task-menu-content">
+                        <a
+                            href="view.php?id=<?= (int)$task["id"] ?>"
+                            class="view-link"
+                        >
+                            View
+                        </a>
+
+
+                        <?php if ($is_admin): ?>
+                            <a
+                                href="delete.php?id=<?= (int)$task["id"] ?>"
+                                class="delete-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                Delete
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
             </div>
@@ -3204,6 +3842,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 </div>
 
+                <?php if ($selected_board): ?>
+                    <div class="task-board-name-badge">
+                        <i class="bi bi-kanban"></i>
+                        <?= htmlspecialchars($selected_board["name"]) ?>
+                    </div>
+                <?php endif; ?>
+
 
                 <?php if (!empty($task["description"])): ?>
 
@@ -3295,13 +3940,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <div class="task-menu-content">
 
-                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+
+                        <a
+                            href="view.php?id=<?= (int)$task["id"] ?>"
+                            class="view-link"
+                        >
                             View
-                        </a>
-
-
-                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
-                            Edit
                         </a>
 
 
@@ -3310,7 +3954,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
                                 class="delete-link"
-                                onclick="return confirm('Are you sure you want to delete this task?');"
+                                data-task-id="<?= (int)$task["id"] ?>"
                             >
                                 Delete
                             </a>
@@ -3391,6 +4035,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 </div>
 
+                <?php if ($selected_board): ?>
+                    <div class="task-board-name-badge">
+                        <i class="bi bi-kanban"></i>
+                        <?= htmlspecialchars($selected_board["name"]) ?>
+                    </div>
+                <?php endif; ?>
+
 
                 <?php if (!empty($task["description"])): ?>
 
@@ -3482,13 +4133,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <div class="task-menu-content">
 
-                        <a href="view.php?id=<?= (int)$task["id"] ?>">
+
+                        <a
+                            href="view.php?id=<?= (int)$task["id"] ?>"
+                            class="view-link"
+                        >
                             View
-                        </a>
-
-
-                        <a href="edit.php?id=<?= (int)$task["id"] ?>">
-                            Edit
                         </a>
 
 
@@ -3497,7 +4147,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <a
                                 href="delete.php?id=<?= (int)$task["id"] ?>"
                                 class="delete-link"
-                                onclick="return confirm('Are you sure you want to delete this task?');"
+                                data-task-id="<?= (int)$task["id"] ?>"
                             >
                                 Delete
                             </a>
@@ -3516,6 +4166,92 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </div>
 
+
+<!-- =========================================================
+     BOARD COLUMN
+========================================================= -->
+
+<div
+    class="task-column board-task-column"
+    data-progress="Board"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">BOARD</span>
+
+        <span class="column-count"><?= count($boards) ?></span>
+
+        <?php if ($is_admin || $is_user): ?>
+            <button
+                type="button"
+                class="column-add-btn"
+                id="boardColumnAddBtn"
+                title="Add board"
+                aria-label="Add board"
+            >
+                <i class="bi bi-plus"></i>
+            </button>
+        <?php endif; ?>
+
+    </div>
+
+    <div class="board-card-list">
+
+        <?php foreach ($boards as $board): ?>
+
+            <div
+                class="board-card <?= ((int)$board["id"] === $selected_board_id) ? "active" : "" ?>"
+                data-board-id="<?= (int)$board["id"] ?>"
+                role="button"
+                tabindex="0"
+            >
+
+                <div class="board-card-name">
+                    <?= htmlspecialchars($board["name"]) ?>
+                </div>
+
+                <?php if (!empty($board["description"])): ?>
+                    <div class="board-card-description">
+                        <?= htmlspecialchars($board["description"]) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($is_admin || $is_user): ?>
+                    <div class="board-card-menu">
+                        <button
+                            type="button"
+                            class="board-card-menu-button"
+                            aria-label="Board menu"
+                            title="Board menu"
+                        >
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+
+                        <div class="board-card-menu-content">
+                            <button
+                                type="button"
+                                class="board-card-menu-delete"
+                                data-board-id="<?= (int)$board["id"] ?>"
+                            >
+                                <i class="bi bi-trash me-1"></i>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+            </div>
+
+        <?php endforeach; ?>
+
+        <?php if (empty($boards)): ?>
+            <div class="board-empty">
+                No boards yet. Use <strong>+ Add Board</strong> to create your first board.
+            </div>
+        <?php endif; ?>
+
+    </div>
 
 </div>
 
@@ -3562,12 +4298,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
 
 
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-            ></button>
+            <div class="task-details-header-actions">
+
+                <button
+                    type="button"
+                    class="btn btn-primary task-details-edit-btn"
+                    id="taskDetailsEditBtn"
+                >
+                    <i class="bi bi-pencil"></i>
+                    Edit
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary task-details-back-btn"
+                    data-bs-dismiss="modal"
+                    aria-label="Back"
+                >
+                    <i class="bi bi-arrow-left"></i>
+                    Back
+                </button>
+
+            </div>
 
         </div>
 
@@ -3606,9 +4358,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <div class="trello-card-section">
 
-                        <div class="trello-card-section-heading">
-                            <i class="bi bi-text-paragraph"></i>
-                            Description
+                        <div class="trello-card-section-heading-row">
+
+                            <div class="trello-card-section-heading">
+                                <i class="bi bi-text-paragraph"></i>
+                                Description
+                            </div>
+
                         </div>
 
                         <div
@@ -3617,6 +4373,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         >
                             No description provided.
                         </div>
+
+                        <textarea
+                            class="form-control d-none"
+                            id="modalTaskDescriptionInput"
+                            rows="4"
+                            placeholder="Enter task description"
+                        ></textarea>
 
                     </div>
 
@@ -3755,31 +4518,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <div class="trello-sidebar-item">
 
                         <span class="trello-sidebar-item-label">
-                            Task ID
-                        </span>
-
-                        <span
-                            class="task-detail-value trello-chip"
-                            id="modalTaskId"
-                        >
-                            —
-                        </span>
-
-                    </div>
-
-
-                    <div class="trello-sidebar-item">
-
-                        <span class="trello-sidebar-item-label">
                             Priority
                         </span>
 
-                        <span
-                            class="task-detail-value trello-chip"
-                            id="modalTaskPriority"
-                        >
-                            —
-                        </span>
+                        <div class="task-detail-field">
+
+                            <span
+                                class="task-detail-value trello-chip"
+                                id="modalTaskPriority"
+                            >
+                                —
+                            </span>
+
+                            <select
+                                class="task-detail-select d-none"
+                                id="modalTaskPrioritySelect"
+                                data-field="priority"
+                            >
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+
+                        </div>
 
                     </div>
 
@@ -3790,9 +4551,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             Progress
                         </span>
 
+                        <div class="task-detail-field">
+
+                            <div class="task-detail-field">
+
+                                <span
+                                    class="task-detail-value trello-chip"
+                                    id="modalTaskProgress"
+                                >
+                                    —
+                                </span>
+
+                                <span
+                                    class="task-progress-board-name d-block mt-2 small text-muted"
+                                    id="modalTaskProgressBoardName"
+                                >
+                                    <i class="bi bi-kanban me-1"></i>
+                                    Board: —
+                                </span>
+
+                            </div>
+
+                            <select
+                                class="task-detail-select d-none"
+                                id="modalTaskProgressSelect"
+                                data-field="progress"
+                            >
+                                <option value="Todo">Todo</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Review">Review</option>
+                                <option value="Done">Done</option>
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
+                            Board
+                        </span>
+
                         <span
                             class="task-detail-value trello-chip"
-                            id="modalTaskProgress"
+                            id="modalTaskBoardName"
                         >
                             —
                         </span>
@@ -3806,28 +4611,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             Completion
                         </span>
 
-                        <span
-                            class="task-detail-value trello-chip"
-                            id="modalTaskCompleted"
-                        >
-                            —
-                        </span>
+                        <div class="task-detail-field">
 
-                    </div>
+                            <span
+                                class="task-detail-value trello-chip"
+                                id="modalTaskCompleted"
+                            >
+                                —
+                            </span>
 
+                            <select
+                                class="task-detail-select d-none"
+                                id="modalTaskCompletedSelect"
+                                data-field="is_completed"
+                            >
+                                <option value="1">Completed</option>
+                                <option value="0">Incomplete</option>
+                            </select>
 
-                    <div class="trello-sidebar-item">
-
-                        <span class="trello-sidebar-item-label">
-                            Status
-                        </span>
-
-                        <span
-                            class="task-detail-value trello-chip"
-                            id="modalTaskStatus"
-                        >
-                            —
-                        </span>
+                        </div>
 
                     </div>
 
@@ -3884,15 +4686,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <!-- MODAL FOOTER -->
 
-        <div class="modal-footer">
+        <div class="modal-footer task-details-edit-footer">
 
-            <button
-                type="button"
-                class="btn btn-secondary task-details-close-btn"
-                data-bs-dismiss="modal"
-            >
-                Close
-            </button>
+            <div class="task-details-footer-actions">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary task-details-cancel-btn d-none"
+                    id="taskDetailsCancelBtn"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-primary task-details-save-btn d-none"
+                    id="taskDetailsSaveBtn"
+                >
+                    <i class="bi bi-check-lg"></i>
+                    Save
+                </button>
+
+            </div>
 
         </div>
 
@@ -3922,7 +4737,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <form method="POST" action="index.php">
+            <form method="POST" action="index.php" id="addBoardForm">
                 <div class="modal-body">
                     <?php if ($board_error !== ""): ?>
                         <div class="alert alert-danger">
@@ -4084,6 +4899,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     >
                         <option value="Todo">Todo</option>
                         <option value="In Progress">In Progress</option>
+                        <option value="Pending">Pending</option>
                         <option value="Review">Review</option>
                         <option value="Done">Done</option>
                     </select>
@@ -4138,185 +4954,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
 
-<!-- =========================================================
-     EDIT TASK MODAL
-========================================================= -->
 
-<div
-    class="modal fade"
-    id="editTaskModal"
-    tabindex="-1"
-    aria-labelledby="editTaskModalLabel"
-    aria-hidden="true"
->
-
-<div class="modal-dialog modal-dialog-centered">
-
-    <div class="modal-content">
-
-        <div class="modal-header">
-
-            <h5
-                class="modal-title"
-                id="editTaskModalLabel"
-            >
-                Edit Task
-            </h5>
-
-            <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-            ></button>
-
-        </div>
-
-        <div class="modal-body">
-
-            <div
-                id="editTaskError"
-                class="alert alert-danger d-none"
-            ></div>
-
-            <form id="editTaskForm">
-
-                <input
-                    type="hidden"
-                    name="id"
-                    id="editTaskId"
-                >
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Task
-                    </label>
-
-                    <input
-                        type="text"
-                        name="task"
-                        id="editTaskTitle"
-                        class="form-control"
-                        placeholder="Enter task title"
-                        maxlength="255"
-                        required
-                    >
-
-                </div>
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Description
-                    </label>
-
-                    <textarea
-                        name="description"
-                        id="editTaskDescription"
-                        class="form-control"
-                        rows="4"
-                        placeholder="Enter task description"
-                    ></textarea>
-
-                </div>
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Priority
-                    </label>
-
-                    <select
-                        name="priority"
-                        id="editTaskPriority"
-                        class="form-select"
-                    >
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                    </select>
-
-                </div>
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Progress
-                    </label>
-
-                    <select
-                        name="progress"
-                        id="editTaskProgress"
-                        class="form-select"
-                    >
-                        <option value="Todo">Todo</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Review">Review</option>
-                        <option value="Done">Done</option>
-                    </select>
-
-                </div>
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Status
-                    </label>
-
-                    <select
-                        name="status"
-                        id="editTaskStatus"
-                        class="form-select"
-                    >
-                        <option value="1">Active</option>
-                        <option value="0">Inactive</option>
-                    </select>
-
-                </div>
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Completion
-                    </label>
-
-                    <select
-                        name="is_completed"
-                        id="editTaskCompleted"
-                        class="form-select"
-                    >
-                        <option value="0">Incomplete</option>
-                        <option value="1">Complete</option>
-                    </select>
-
-                </div>
-
-            </form>
-
-        </div>
-
-        <div class="modal-footer">
-
-            <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-            >
-                Cancel
-            </button>
-
-            <button
-                type="button"
-                class="btn btn-primary"
-                id="editTaskSubmitBtn"
-            >
-                Update Task
-            </button>
-
-        </div>
-
-    </div>
 
 </div>
 
@@ -4392,6 +5030,92 @@ let currentTaskId = 0;
 const TOUCH_LONG_PRESS = 300;
 
 const TOUCH_MOVE_THRESHOLD = 10;
+
+/* =========================================================
+   OUTER BOARD TOUCH SCROLL STATE
+   Allows direct finger swiping on the six-column board
+   to scroll horizontally and vertically.
+========================================================= */
+
+let boardTouchScrolling = false;
+
+let boardTouchStartX = 0;
+
+let boardTouchStartY = 0;
+
+let boardTouchLastX = 0;
+
+let boardTouchLastY = 0;
+
+let boardTouchMoved = false;
+
+let boardTouchStartedInList = false;
+
+
+/* =========================================================
+   SHARED TOUCH SCROLL HELPER
+   Horizontal movement always scrolls the outer six-column
+   board. Vertical movement scrolls whichever column's task
+   list the touch is over (so cards keep appearing/disappearing
+   correctly), falling back to the outer board if the touch
+   is not over any task list.
+========================================================= */
+
+function performBoardTouchScroll(originElement, deltaX, deltaY)
+{
+
+    const board =
+        document.querySelector(
+            ".board-wrapper"
+        );
+
+    if (!board) {
+
+        return;
+
+    }
+
+
+    if (
+        board.scrollWidth >
+        board.clientWidth
+    ) {
+
+        board.scrollLeft -=
+            deltaX;
+
+    }
+
+
+    const list =
+        originElement ?
+            originElement.closest(
+                ".task-list"
+            ) :
+            null;
+
+
+    if (
+        list &&
+        list.scrollHeight >
+        list.clientHeight
+    ) {
+
+        list.scrollTop -=
+            deltaY;
+
+    }
+    else if (
+        board.scrollHeight >
+        board.clientHeight
+    ) {
+
+        board.scrollTop -=
+            deltaY;
+
+    }
+
+}
 
 
 /* =========================================================
@@ -5234,12 +5958,12 @@ function openTaskDetails(card)
         card.dataset.taskProgress || "—";
 
 
+    const taskBoardName =
+        card.dataset.taskBoardName || "—";
+
+
     const taskCompleted =
         card.dataset.taskCompleted || "—";
-
-
-    const taskStatus =
-        card.dataset.taskStatus || "—";
 
 
     const taskAdded =
@@ -5263,12 +5987,6 @@ function openTaskDetails(card)
     ===================================================== */
 
     setModalValue(
-        "modalTaskId",
-        taskId
-    );
-
-
-    setModalValue(
         "modalTaskTitle",
         taskTitle
     );
@@ -5287,14 +6005,27 @@ function openTaskDetails(card)
 
 
     setModalValue(
-        "modalTaskCompleted",
-        taskCompleted
+        "modalTaskBoardName",
+        taskBoardName
     );
 
 
+    const progressBoardNameElement =
+        document.getElementById(
+            "modalTaskProgressBoardName"
+        );
+
+    if (progressBoardNameElement) {
+        progressBoardNameElement.innerHTML =
+            '<i class="bi bi-kanban me-1"></i>Board: ' +
+            escapeHtml(taskBoardName) +
+            '';
+    }
+
+
     setModalValue(
-        "modalTaskStatus",
-        taskStatus
+        "modalTaskCompleted",
+        taskCompleted === "Complete" ? "Completed" : "Incomplete"
     );
 
 
@@ -5387,41 +6118,53 @@ function openTaskDetails(card)
 
 
     /* =====================================================
-       ACTIVE / INACTIVE COLOR
+       PRE-FILL EDIT CONTROLS + RESET TO VIEW MODE
     ===================================================== */
 
-    const statusElement =
+    const prioritySelect =
         document.getElementById(
-            "modalTaskStatus"
+            "modalTaskPrioritySelect"
         );
 
-
-    if (statusElement) {
-
-        statusElement.classList.remove(
-            "status-active",
-            "status-inactive"
-        );
-
-
-        if (
-            taskStatus === "Active"
-        ) {
-
-            statusElement.classList.add(
-                "status-active"
-            );
-
-        }
-        else {
-
-            statusElement.classList.add(
-                "status-inactive"
-            );
-
-        }
-
+    if (prioritySelect) {
+        prioritySelect.value = taskPriority;
     }
+
+
+    const progressSelect =
+        document.getElementById(
+            "modalTaskProgressSelect"
+        );
+
+    if (progressSelect) {
+        progressSelect.value = taskProgress;
+    }
+
+
+    const completedSelect =
+        document.getElementById(
+            "modalTaskCompletedSelect"
+        );
+
+    if (completedSelect) {
+        completedSelect.value =
+            (taskCompleted === "Complete") ? "1" : "0";
+    }
+
+
+    const descriptionInput =
+        document.getElementById(
+            "modalTaskDescriptionInput"
+        );
+
+    if (descriptionInput) {
+        descriptionInput.value = taskDescription;
+    }
+
+
+    taskDetailsEditSnapshot = null;
+
+    resetTaskFieldEditModes();
 
 
     /* =====================================================
@@ -5464,6 +6207,527 @@ function openTaskDetails(card)
     ===================================================== */
 
     taskDetailsModal.show();
+
+}
+
+
+/* =========================================================
+   RESET INLINE EDIT MODES (VIEW CARD)
+========================================================= */
+
+function resetTaskFieldEditModes()
+{
+
+    const editBtn = document.getElementById("taskDetailsEditBtn");
+    const saveBtn = document.getElementById("taskDetailsSaveBtn");
+    const cancelBtn = document.getElementById("taskDetailsCancelBtn");
+
+    document.querySelectorAll(".task-detail-select").forEach(function(select) {
+        select.classList.add("d-none");
+    });
+
+    document.querySelectorAll(".task-detail-field .task-detail-value").forEach(function(chip) {
+        chip.classList.remove("d-none");
+    });
+
+    const descriptionView = document.getElementById("modalTaskDescription");
+    const descriptionInput = document.getElementById("modalTaskDescriptionInput");
+
+    if (descriptionView) descriptionView.classList.remove("d-none");
+    if (descriptionInput) descriptionInput.classList.add("d-none");
+
+    if (editBtn) editBtn.classList.remove("d-none");
+    if (saveBtn) saveBtn.classList.add("d-none");
+    if (cancelBtn) cancelBtn.classList.add("d-none");
+
+}
+
+
+let taskDetailsEditSnapshot = null;
+
+
+function enterTaskDetailsEditMode()
+{
+    if (currentTaskId <= 0) return;
+
+    const prioritySelect = document.getElementById("modalTaskPrioritySelect");
+    const progressSelect = document.getElementById("modalTaskProgressSelect");
+    const completedSelect = document.getElementById("modalTaskCompletedSelect");
+    const descriptionInput = document.getElementById("modalTaskDescriptionInput");
+
+    taskDetailsEditSnapshot = {
+        priority: prioritySelect ? prioritySelect.value : "",
+        progress: progressSelect ? progressSelect.value : "",
+        is_completed: completedSelect ? completedSelect.value : "0",
+        description: descriptionInput ? descriptionInput.value : ""
+    };
+
+    document.querySelectorAll(".task-detail-select").forEach(function(select) {
+        select.classList.remove("d-none");
+    });
+
+    document.querySelectorAll(".task-detail-field .task-detail-value").forEach(function(chip) {
+        chip.classList.add("d-none");
+    });
+
+    const descriptionView = document.getElementById("modalTaskDescription");
+    if (descriptionView) descriptionView.classList.add("d-none");
+
+    if (descriptionInput) {
+        descriptionInput.classList.remove("d-none");
+        descriptionInput.focus();
+    }
+
+    const editBtn = document.getElementById("taskDetailsEditBtn");
+    const saveBtn = document.getElementById("taskDetailsSaveBtn");
+    const cancelBtn = document.getElementById("taskDetailsCancelBtn");
+
+    if (editBtn) editBtn.classList.add("d-none");
+    if (saveBtn) saveBtn.classList.remove("d-none");
+    if (cancelBtn) cancelBtn.classList.remove("d-none");
+}
+
+
+function cancelTaskDetailsEdit()
+{
+    if (taskDetailsEditSnapshot) {
+        const prioritySelect = document.getElementById("modalTaskPrioritySelect");
+        const progressSelect = document.getElementById("modalTaskProgressSelect");
+        const completedSelect = document.getElementById("modalTaskCompletedSelect");
+        const descriptionInput = document.getElementById("modalTaskDescriptionInput");
+
+        if (prioritySelect) prioritySelect.value = taskDetailsEditSnapshot.priority;
+        if (progressSelect) progressSelect.value = taskDetailsEditSnapshot.progress;
+        if (completedSelect) completedSelect.value = taskDetailsEditSnapshot.is_completed;
+        if (descriptionInput) descriptionInput.value = taskDetailsEditSnapshot.description;
+    }
+
+    resetTaskFieldEditModes();
+    taskDetailsEditSnapshot = null;
+}
+
+
+function saveTaskDetailsEdit()
+{
+    if (currentTaskId <= 0) return;
+
+    const prioritySelect = document.getElementById("modalTaskPrioritySelect");
+    const progressSelect = document.getElementById("modalTaskProgressSelect");
+    const completedSelect = document.getElementById("modalTaskCompletedSelect");
+    const descriptionInput = document.getElementById("modalTaskDescriptionInput");
+    const saveBtn = document.getElementById("taskDetailsSaveBtn");
+    const cancelBtn = document.getElementById("taskDetailsCancelBtn");
+
+    const values = {
+        priority: prioritySelect ? prioritySelect.value : "",
+        progress: progressSelect ? progressSelect.value : "",
+        is_completed: completedSelect ? completedSelect.value : "0",
+        description: descriptionInput ? descriptionInput.value : ""
+    };
+
+    const fields = ["priority", "progress", "is_completed", "description"];
+    const originalHtml = saveBtn ? saveBtn.innerHTML : "";
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
+
+    let chain = Promise.resolve();
+    const saved = {};
+
+    fields.forEach(function(field) {
+        chain = chain.then(function() {
+            return new Promise(function(resolve, reject) {
+                saveTaskField(currentTaskId, field, values[field], function(data) {
+                    saved[field] = data;
+                    resolve();
+                });
+            });
+        });
+    });
+
+    chain.then(function() {
+        setModalValue("modalTaskPriority", values.priority);
+        setModalValue("modalTaskProgress", values.progress);
+        setModalValue("modalTaskCompleted", values.is_completed === "1" ? "Completed" : "Incomplete");
+        const editedDisplay =
+            saved.description?.edited ||
+            saved.is_completed?.edited ||
+            saved.progress?.edited ||
+            saved.priority?.edited ||
+            document.getElementById("modalTaskEdited")?.textContent ||
+            "";
+
+        setModalValue("modalTaskEdited", editedDisplay);
+
+        const descriptionView = document.getElementById("modalTaskDescription");
+        if (descriptionView) {
+            if (values.description.trim() !== "") {
+                descriptionView.textContent = values.description;
+                descriptionView.classList.remove("empty");
+            } else {
+                descriptionView.textContent = "No description provided.";
+                descriptionView.classList.add("empty");
+            }
+        }
+
+        updateCardAfterFieldChange(currentTaskId, "priority", values.priority, null);
+        updateCardAfterFieldChange(currentTaskId, "progress", values.progress, null);
+        updateCardAfterFieldChange(currentTaskId, "is_completed", values.is_completed, null);
+        updateCardAfterFieldChange(currentTaskId, "description", values.description, editedDisplay);
+
+        resetTaskFieldEditModes();
+        taskDetailsEditSnapshot = null;
+    }).catch(function(error) {
+        console.error("Task details save error:", error);
+        alert(error.message || "Could not save changes. Please try again.");
+    }).finally(function() {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+        }
+        if (cancelBtn) cancelBtn.disabled = false;
+    });
+}
+
+
+document.addEventListener("click", function(event) {
+    if (event.target.closest("#taskDetailsEditBtn")) {
+        event.preventDefault();
+        enterTaskDetailsEditMode();
+        return;
+    }
+
+    if (event.target.closest("#taskDetailsCancelBtn")) {
+        event.preventDefault();
+        cancelTaskDetailsEdit();
+        return;
+    }
+
+    if (event.target.closest("#taskDetailsSaveBtn")) {
+        event.preventDefault();
+        saveTaskDetailsEdit();
+        return;
+    }
+});
+
+/* =========================================================
+   SAVE TASK FIELD (AJAX)
+========================================================= */
+
+function saveTaskField(taskId, field, value, onSuccess)
+{
+
+    if (!taskId) {
+        return Promise.reject(new Error("Invalid task."));
+    }
+
+    const formData =
+        new FormData();
+
+    formData.append("action", "update_task_field");
+    formData.append("task_id", taskId);
+    formData.append("field", field);
+    formData.append("value", value);
+
+    return fetch(
+        "index.php",
+        {
+            method: "POST",
+            body: formData
+        }
+    )
+        .then(function(response) {
+            return response.json().then(function(data) {
+                if (!response.ok || !data || !data.success) {
+                    throw new Error(
+                        (data && data.message) ?
+                            data.message :
+                            "Could not save changes. Please try again."
+                    );
+                }
+
+                if (typeof onSuccess === "function") {
+                    onSuccess(data);
+                }
+
+                return data;
+            });
+        })
+        .catch(function(error) {
+            console.error("Save task field error:", error);
+            throw error;
+        });
+
+}
+
+
+/* =========================================================
+   PRIORITY / PROGRESS BADGE HELPERS (JS MIRROR OF PHP)
+========================================================= */
+
+function getPriorityBadgeClass(priority)
+{
+
+    switch (priority) {
+
+        case "High":
+            return "priority-high";
+
+        case "Medium":
+            return "priority-medium";
+
+        case "Low":
+            return "priority-low";
+
+        default:
+            return "priority-low";
+
+    }
+
+}
+
+
+function getProgressBadgeClass(progress)
+{
+
+    switch (progress) {
+
+        case "Todo":
+            return "progress-todo";
+
+        case "In Progress":
+            return "progress-progress";
+
+        case "Pending":
+            return "progress-pending";
+
+        case "Review":
+            return "progress-review";
+
+        case "Done":
+            return "progress-done";
+
+        default:
+            return "progress-todo";
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE BOARD CARD AFTER A FIELD IS SAVED
+========================================================= */
+
+function updateCardAfterFieldChange(taskId, field, value, editedDisplay)
+{
+
+    const card =
+        document.querySelector(
+            '.task-card[data-task-id="' + taskId + '"]'
+        );
+
+    if (!card) {
+        return;
+    }
+
+
+    if (editedDisplay) {
+
+        card.dataset.taskEdited = editedDisplay;
+
+        const dateElement =
+            card.querySelector(".task-date");
+
+        if (dateElement) {
+
+            dateElement.innerHTML =
+                '<i class="bi bi-clock"></i> ' +
+                escapeHtml(editedDisplay);
+
+        }
+
+    }
+
+
+    if (field === "priority") {
+
+        card.dataset.taskPriority = value;
+
+        card.classList.remove(
+            "priority-high",
+            "priority-medium",
+            "priority-low"
+        );
+
+        card.classList.add(
+            getPriorityBadgeClass(value)
+        );
+
+        const badge =
+            card.querySelector(".priority-badge");
+
+        if (badge) {
+            badge.textContent = value;
+        }
+
+    }
+    else if (field === "progress") {
+
+        card.dataset.taskProgress = value;
+
+        const badge =
+            card.querySelector(".progress-badge");
+
+        if (badge) {
+
+            badge.classList.remove(
+                "progress-todo",
+                "progress-progress",
+                "progress-review",
+                "progress-done"
+            );
+
+            badge.classList.add(
+                getProgressBadgeClass(value)
+            );
+
+            badge.textContent = value;
+
+        }
+
+
+        const targetList =
+            document.querySelector(
+                '.task-column[data-progress="' +
+                value +
+                '"] .task-list'
+            );
+
+        const sourceColumn =
+            card.closest(".task-column");
+
+        if (targetList && targetList !== card.parentElement) {
+
+            const previousColumn =
+                card.closest(".task-column");
+
+            targetList.appendChild(card);
+
+            updateColumnCount(previousColumn);
+            updateColumnCount(
+                card.closest(".task-column")
+            );
+
+        }
+
+    }
+    else if (field === "is_completed") {
+
+        const isComplete =
+            (String(value) === "1");
+
+        card.dataset.taskCompleted =
+            isComplete ? "Complete" : "Incomplete";
+
+        const badge =
+            card.querySelector(".completion-badge");
+
+        if (badge) {
+
+            badge.classList.remove(
+                "completed",
+                "incomplete"
+            );
+
+            badge.classList.add(
+                isComplete ? "completed" : "incomplete"
+            );
+
+            badge.innerHTML =
+                isComplete ?
+                    '<i class="bi bi-check-circle-fill"></i> Completed' :
+                    '<i class="bi bi-circle"></i> Incomplete';
+
+        }
+
+    }
+    else if (field === "description") {
+
+        card.dataset.taskDescription = value;
+
+        let descriptionElement =
+            card.querySelector(".task-description");
+
+        if (value.trim() !== "") {
+
+            if (!descriptionElement) {
+
+                descriptionElement =
+                    document.createElement("div");
+
+                descriptionElement.className =
+                    "task-description";
+
+                const titleElement =
+                    card.querySelector(".task-title");
+
+                if (titleElement) {
+
+                    titleElement.insertAdjacentElement(
+                        "afterend",
+                        descriptionElement
+                    );
+
+                }
+
+            }
+
+            descriptionElement.innerHTML =
+                escapeHtml(value).replace(/\n/g, "<br>");
+
+        }
+        else if (descriptionElement) {
+
+            descriptionElement.remove();
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE COLUMN TASK COUNT
+========================================================= */
+
+function updateColumnCount(column)
+{
+
+    if (!column) {
+        return;
+    }
+
+    const countElement =
+        column.querySelector(".column-count");
+
+    if (!countElement) {
+        return;
+    }
+
+    const taskList =
+        column.querySelector(".task-list");
+
+    if (!taskList) {
+        return;
+    }
+
+    countElement.textContent =
+        taskList.querySelectorAll(".task-card").length;
 
 }
 
@@ -5520,6 +6784,107 @@ document.addEventListener(
 
 
 /* =========================================================
+   DELETE TASK (NO PAGE NAVIGATION)
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        const deleteLink =
+            event.target.closest(
+                ".delete-link"
+            );
+
+        if (!deleteLink) {
+
+            return;
+
+        }
+
+
+        event.preventDefault();
+
+
+        const confirmed =
+            confirm(
+                "Are you sure you want to delete this task?"
+            );
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+
+        const card =
+            deleteLink.closest(
+                ".task-card"
+            );
+
+        const deleteUrl =
+            deleteLink.getAttribute(
+                "href"
+            );
+
+
+        fetch(
+            deleteUrl,
+            {
+                method: "GET",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                credentials: "same-origin"
+            }
+        )
+            .then(function() {
+
+                document
+                    .querySelectorAll(
+                        ".task-menu-content.show"
+                    )
+                    .forEach(
+                        function(item) {
+
+                            item.classList.remove(
+                                "show"
+                            );
+
+                        }
+                    );
+
+
+                if (card) {
+
+                    const column =
+                        card.closest(
+                            ".task-column"
+                        );
+
+                    card.remove();
+
+                    updateColumnCount(
+                        column
+                    );
+
+                }
+
+            })
+            .catch(function() {
+
+                alert(
+                    "Could not delete the task. Please try again."
+                );
+
+            });
+
+    }
+);
+
+
+/* =========================================================
    ADD COMMENT BUTTON
 ========================================================= */
 
@@ -5537,6 +6902,38 @@ document.addEventListener(
 
             addTaskComment();
 
+        }
+
+    }
+);
+
+
+/* =========================================================
+   BOARD CARD KEYBOARD SELECT
+========================================================= */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key !== "Enter" && event.key !== " ") {
+            return;
+        }
+
+        const boardCard = event.target.closest(".board-card");
+
+        if (!boardCard || event.target.closest(".board-card-add")) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const boardId = Number(boardCard.dataset.boardId || 0);
+
+        if (boardId > 0) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set("board_id", boardId);
+            window.location.href = currentUrl.toString();
         }
 
     }
@@ -6027,6 +7424,202 @@ function getColumnFromPoint(
 
 
 /* =========================================================
+   DRAG AUTO-SCROLL HELPERS
+   Horizontal board scroll + vertical column scroll.
+========================================================= */
+
+function autoScrollWhileDragging(x, y, activeColumn)
+{
+
+    const board =
+        document.querySelector(
+            ".board-wrapper"
+        );
+
+
+    /* =====================================================
+       OUTER BOARD VERTICAL SCROLL
+       Keeps the whole six-column board independently scrollable
+       in addition to each column's own task-list scroll.
+    ===================================================== */
+
+    if (board) {
+
+        const boardRect =
+            board.getBoundingClientRect();
+
+        const outerEdgeSize = 55;
+        const outerMaxSpeed = 12;
+
+        if (board.scrollHeight > board.clientHeight) {
+
+            if (y >= boardRect.bottom - outerEdgeSize) {
+
+                const distance =
+                    Math.max(0, y - (boardRect.bottom - outerEdgeSize));
+
+                board.scrollTop += Math.min(
+                    outerMaxSpeed,
+                    3 + (distance / outerEdgeSize) * 9
+                );
+
+            }
+            else if (y <= boardRect.top + outerEdgeSize) {
+
+                const distance =
+                    Math.max(0, (boardRect.top + outerEdgeSize) - y);
+
+                board.scrollTop -= Math.min(
+                    outerMaxSpeed,
+                    3 + (distance / outerEdgeSize) * 9
+                );
+
+            }
+
+        }
+
+    }
+
+
+    /* =====================================================
+       HORIZONTAL BOARD SCROLL
+    ===================================================== */
+
+    if (board) {
+
+        const rect =
+            board.getBoundingClientRect();
+
+        const edgeSize = 70;
+        const maxSpeed = 18;
+
+        /* Only scroll horizontally when the board actually has overflow. */
+        if (board.scrollWidth > board.clientWidth && x >= rect.right - edgeSize) {
+
+            const distance =
+                Math.max(0, x - (rect.right - edgeSize));
+
+            const speed =
+                Math.min(
+                    maxSpeed,
+                    5 + (distance / edgeSize) * 13
+                );
+
+            board.scrollLeft += speed;
+
+        }
+        else if (board.scrollWidth > board.clientWidth && x <= rect.left + edgeSize) {
+
+            const distance =
+                Math.max(0, (rect.left + edgeSize) - x);
+
+            const speed =
+                Math.min(
+                    maxSpeed,
+                    5 + (distance / edgeSize) * 13
+                );
+
+            board.scrollLeft -= speed;
+
+        }
+
+    }
+
+
+    /* =====================================================
+       VERTICAL ACTIVE-COLUMN SCROLL
+    ===================================================== */
+
+    if (activeColumn) {
+
+        const list =
+            activeColumn.querySelector(
+                ".task-list"
+            );
+
+        if (list && list.scrollHeight > list.clientHeight) {
+
+            const rect =
+                list.getBoundingClientRect();
+
+            const edgeSize = 65;
+            const maxSpeed = 16;
+
+            if (y >= rect.bottom - edgeSize) {
+
+                const distance =
+                    Math.max(0, y - (rect.bottom - edgeSize));
+
+                const speed =
+                    Math.min(
+                        maxSpeed,
+                        4 + (distance / edgeSize) * 12
+                    );
+
+                list.scrollTop += speed;
+
+            }
+            else if (y <= rect.top + edgeSize) {
+
+                const distance =
+                    Math.max(0, (rect.top + edgeSize) - y);
+
+                const speed =
+                    Math.min(
+                        maxSpeed,
+                        4 + (distance / edgeSize) * 12
+                    );
+
+                list.scrollTop -= speed;
+
+            }
+
+        }
+
+    }
+
+}
+
+
+function autoScrollPageWhileDragging(y)
+{
+
+    const edgeSize = 55;
+    const maxSpeed = 12;
+
+    if (y >= window.innerHeight - edgeSize) {
+
+        const distance =
+            Math.max(0, y - (window.innerHeight - edgeSize));
+
+        window.scrollBy({
+            top: Math.min(
+                maxSpeed,
+                3 + (distance / edgeSize) * 9
+            ),
+            left: 0
+        });
+
+    }
+    else if (y <= edgeSize) {
+
+        const distance =
+            Math.max(0, edgeSize - y);
+
+        window.scrollBy({
+            top: -Math.min(
+                maxSpeed,
+                3 + (distance / edgeSize) * 9
+            ),
+            left: 0
+        });
+
+    }
+
+}
+
+
+/* =========================================================
    DESKTOP DRAG OVER
 ========================================================= */
 
@@ -6055,6 +7648,17 @@ document.addEventListener(
 
 
         event.preventDefault();
+
+
+        autoScrollWhileDragging(
+            event.clientX,
+            event.clientY,
+            column
+        );
+
+        autoScrollPageWhileDragging(
+            event.clientY
+        );
 
 
         column.classList.add(
@@ -6127,88 +7731,45 @@ function saveTaskProgress(
     progress
 )
 {
-
-    if (
-        !taskId ||
-        !progress
-    ) {
-
-        return;
-
+    if (!taskId || !progress) {
+        return Promise.resolve(false);
     }
 
+    const formData = new FormData();
+    formData.append("task_id", taskId);
+    formData.append("progress", progress);
+    formData.append("board_id", <?= (int)$selected_board_id ?>);
 
-    const form =
-        document.createElement(
-            "form"
-        );
+    return fetch("index.php", {
+        method: "POST",
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+        },
+        body: formData
+    })
+    .then(async function(response) {
+        const raw = await response.text();
+        let data;
 
+        try {
+            data = JSON.parse(raw);
+        } catch (error) {
+            console.error("Progress update returned non-JSON:", raw);
+            throw new Error("Unable to update task progress.");
+        }
 
-    form.method =
-        "POST";
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || "Unable to update task progress.");
+        }
 
-
-    form.action =
-        "index.php";
-
-
-    form.style.display =
-        "none";
-
-
-    const taskInput =
-        document.createElement(
-            "input"
-        );
-
-
-    taskInput.type =
-        "hidden";
-
-
-    taskInput.name =
-        "task_id";
-
-
-    taskInput.value =
-        taskId;
-
-
-    const progressInput =
-        document.createElement(
-            "input"
-        );
-
-
-    progressInput.type =
-        "hidden";
-
-
-    progressInput.name =
-        "progress";
-
-
-    progressInput.value =
-        progress;
-
-
-    form.appendChild(
-        taskInput
-    );
-
-
-    form.appendChild(
-        progressInput
-    );
-
-
-    document.body.appendChild(
-        form
-    );
-
-
-    form.submit();
-
+        return data;
+    })
+    .catch(function(error) {
+        console.error("Progress update error:", error);
+        alert(error.message || "Unable to update task progress.");
+        return false;
+    });
 }
 
 
@@ -6262,11 +7823,145 @@ document.addEventListener(
             saveTaskProgress(
                 taskId,
                 newProgress
-            );
+            ).then(function(data) {
+
+                if (data && data.success) {
+                    updateCardAfterFieldChange(
+                        taskId,
+                        "progress",
+                        newProgress,
+                        null
+                    );
+                }
+
+            });
 
         }
 
     }
+);
+
+
+/* =========================================================
+   OUTER BOARD DIRECT TOUCH SCROLL
+   Swipe anywhere on the outer board background/header to
+   scroll the complete six-column board in both directions.
+   Task cards keep the existing long-press drag behavior and
+   task lists keep their own vertical scrolling.
+========================================================= */
+
+document.addEventListener(
+    "touchstart",
+    function(event) {
+
+        const board = event.target.closest(".board-wrapper");
+
+        if (!board) {
+            return;
+        }
+
+        /* Do not interfere with card drag (columns now scroll too). */
+        if (
+            event.target.closest(".task-card")
+        ) {
+            return;
+        }
+
+        const touch = event.touches[0];
+
+        if (!touch) {
+            return;
+        }
+
+        boardTouchScrolling = true;
+        boardTouchMoved = false;
+        boardTouchStartX = touch.clientX;
+        boardTouchStartY = touch.clientY;
+        boardTouchLastX = touch.clientX;
+        boardTouchLastY = touch.clientY;
+
+        boardTouchStartedInList =
+            !!event.target.closest(".task-list");
+
+    },
+    { passive: true }
+);
+
+
+document.addEventListener(
+    "touchmove",
+    function(event) {
+
+        if (!boardTouchScrolling) {
+            return;
+        }
+
+        const board = document.querySelector(".board-wrapper");
+        const touch = event.touches[0];
+
+        if (!board || !touch) {
+            return;
+        }
+
+        const dx = touch.clientX - boardTouchLastX;
+        const dy = touch.clientY - boardTouchLastY;
+
+        const totalX = touch.clientX - boardTouchStartX;
+        const totalY = touch.clientY - boardTouchStartY;
+
+        if (
+            Math.abs(totalX) > TOUCH_MOVE_THRESHOLD ||
+            Math.abs(totalY) > TOUCH_MOVE_THRESHOLD
+        ) {
+            boardTouchMoved = true;
+        }
+
+        if (!boardTouchMoved) {
+            return;
+        }
+
+        /* Both column (task list) and background swipes now scroll
+           the board horizontally and the relevant list/board
+           vertically, via the shared helper. */
+        performBoardTouchScroll(
+            event.target,
+            dx,
+            dy
+        );
+
+        boardTouchLastX = touch.clientX;
+        boardTouchLastY = touch.clientY;
+
+        event.preventDefault();
+
+    },
+    { passive: false }
+);
+
+
+document.addEventListener(
+    "touchend",
+    function() {
+
+        boardTouchScrolling = false;
+        boardTouchMoved = false;
+        boardTouchStartedInList = false;
+
+    },
+    { passive: true }
+);
+
+
+document.addEventListener(
+    "touchcancel",
+    function() {
+
+        boardTouchScrolling = false;
+        boardTouchMoved = false;
+        boardTouchStartedInList = false;
+
+    },
+    { passive: true }
 );
 
 
@@ -6440,6 +8135,14 @@ document.addEventListener(
 
         if (!isTouchDragging) {
 
+            /*
+             * A normal swipe on a task card must scroll the OUTER
+             * six-column board in both directions. Do this before
+             * cancelling the card touch state so horizontal and
+             * vertical swipes are not trapped by the card/column.
+             * A short tap still opens the task details, while a
+             * long press still enters the existing drag mode.
+             */
             if (
                 distance >
                 TOUCH_MOVE_THRESHOLD
@@ -6450,6 +8153,13 @@ document.addEventListener(
                 );
 
 
+                performBoardTouchScroll(
+                    event.target,
+                    touchCurrentX - touchStartX,
+                    touchCurrentY - touchStartY
+                );
+
+
                 touchDraggedCard.classList.remove(
                     "touch-ready"
                 );
@@ -6457,6 +8167,9 @@ document.addEventListener(
 
                 touchDraggedCard =
                     null;
+
+
+                event.preventDefault();
 
             }
 
@@ -6513,84 +8226,23 @@ document.addEventListener(
 
 
         /* =================================================
-           AUTO HORIZONTAL SCROLL
+           AUTO HORIZONTAL + COLUMN VERTICAL SCROLL
         ================================================= */
 
-        const board =
-            document.querySelector(
-                ".board-wrapper"
-            );
-
-
-        if (board) {
-
-            const rect =
-                board.getBoundingClientRect();
-
-
-            const edgeSize =
-                55;
-
-
-            const scrollSpeed =
-                12;
-
-
-            if (
-                touchCurrentX >
-                rect.right -
-                edgeSize
-            ) {
-
-                board.scrollLeft +=
-                    scrollSpeed;
-
-            }
-            else if (
-                touchCurrentX <
-                rect.left +
-                edgeSize
-            ) {
-
-                board.scrollLeft -=
-                    scrollSpeed;
-
-            }
-
-        }
+        autoScrollWhileDragging(
+            touchCurrentX,
+            touchCurrentY,
+            column
+        );
 
 
         /* =================================================
            VERTICAL PAGE SCROLL
         ================================================= */
 
-        const verticalEdge =
-            60;
-
-
-        if (
-            touchCurrentY >
-            window.innerHeight -
-            verticalEdge
-        ) {
-
-            window.scrollBy(
-                0,
-                10
-            );
-
-        }
-        else if (
-            touchCurrentY <
-            verticalEdge
-        ) {
-
-            window.scrollBy(
-                0,
-                -10
-            );
-
-        }
+        autoScrollPageWhileDragging(
+            touchCurrentY
+        );
 
     },
     {
@@ -6679,7 +8331,18 @@ document.addEventListener(
             saveTaskProgress(
                 taskId,
                 newProgress
-            );
+            ).then(function(data) {
+
+                if (data && data.success) {
+                    updateCardAfterFieldChange(
+                        taskId,
+                        "progress",
+                        newProgress,
+                        null
+                    );
+                }
+
+            });
 
         }
         else {
@@ -6998,30 +8661,11 @@ if (addTaskModalElement) {
 }
 
 
-const editTaskModalElement =
-    document.getElementById(
-        "editTaskModal"
-    );
-
-
-let editTaskModal = null;
-
-
-if (editTaskModalElement) {
-
-    editTaskModal =
-        new bootstrap.Modal(
-            editTaskModalElement
-        );
-
-}
-
-
 /* =========================================================
    OPEN ADD TASK MODAL
 ========================================================= */
 
-function openAddTaskModal(progress)
+function openAddTaskModal(progress, boardId)
 {
 
     if (!addTaskModal) {
@@ -7047,7 +8691,9 @@ function openAddTaskModal(progress)
             );
 
         if (boardInput) {
-            boardInput.value = "<?= (int)$selected_board_id ?>";
+            boardInput.value = Number(boardId) > 0
+                ? Number(boardId)
+                : <?= (int)$selected_board_id ?>;
         }
 
     }
@@ -7088,90 +8734,6 @@ function openAddTaskModal(progress)
 
 
     addTaskModal.show();
-
-}
-
-
-/* =========================================================
-   OPEN EDIT TASK MODAL
-========================================================= */
-
-function openEditTaskModal(card)
-{
-
-    if (!card || !editTaskModal) {
-
-        return;
-
-    }
-
-
-    const errorBox =
-        document.getElementById(
-            "editTaskError"
-        );
-
-
-    if (errorBox) {
-
-        errorBox.textContent = "";
-
-        errorBox.classList.add(
-            "d-none"
-        );
-
-    }
-
-
-    document.getElementById(
-        "editTaskId"
-    ).value =
-        card.dataset.taskId || "0";
-
-
-    document.getElementById(
-        "editTaskTitle"
-    ).value =
-        card.dataset.taskTitle || "";
-
-
-    document.getElementById(
-        "editTaskDescription"
-    ).value =
-        card.dataset.taskDescription || "";
-
-
-    document.getElementById(
-        "editTaskPriority"
-    ).value =
-        card.dataset.taskPriority || "Medium";
-
-
-    document.getElementById(
-        "editTaskProgress"
-    ).value =
-        card.dataset.taskProgress || "Todo";
-
-
-    document.getElementById(
-        "editTaskStatus"
-    ).value =
-        (
-            card.dataset.taskStatus ===
-            "Active"
-        ) ? "1" : "0";
-
-
-    document.getElementById(
-        "editTaskCompleted"
-    ).value =
-        (
-            card.dataset.taskCompleted ===
-            "Complete"
-        ) ? "1" : "0";
-
-
-    editTaskModal.show();
 
 }
 
@@ -7333,6 +8895,138 @@ function submitTaskForm(
 
 
 /* =========================================================
+   ADD BOARD VIA AJAX
+   Add the board directly into the BOARD column.
+========================================================= */
+
+const addBoardForm = document.getElementById("addBoardForm");
+
+if (addBoardForm) {
+
+    addBoardForm.addEventListener("submit", function(event) {
+
+        event.preventDefault();
+
+        const submitBtn = addBoardForm.querySelector("button[type=submit]");
+        const errorBox = addBoardForm.querySelector(".alert-danger");
+        const originalHtml = submitBtn ? submitBtn.innerHTML : "";
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
+        }
+
+        if (errorBox) {
+            errorBox.textContent = "";
+            errorBox.classList.add("d-none");
+        }
+
+        const formData = new FormData(addBoardForm);
+
+        fetch(addBoardForm.action, {
+            method: "POST",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json"
+            },
+            body: formData
+        })
+        .then(async function(response) {
+            const raw = await response.text();
+            let data;
+
+            try {
+                data = JSON.parse(raw);
+            } catch (e) {
+                console.error("Create board returned non-JSON:", raw);
+                throw new Error("The server returned an invalid response. Please check the PHP error/log.");
+            }
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Unable to create board.");
+            }
+
+            return data;
+        })
+        .then(function(data) {
+
+            const board = data.board;
+            if (!board || !board.id) {
+                throw new Error("Board was created but no board data was returned.");
+            }
+
+            const boardList = document.querySelector(".board-card-list");
+            const boardCount = document.querySelector(".board-task-column .column-count");
+
+            if (boardList) {
+                const emptyState = boardList.querySelector(".board-empty");
+                if (emptyState) emptyState.remove();
+
+                boardList.querySelectorAll(".board-card").forEach(function(card) {
+                    card.classList.remove("active");
+                });
+
+                const boardCard = document.createElement("div");
+                boardCard.className = "board-card active";
+                boardCard.dataset.boardId = board.id;
+                boardCard.setAttribute("role", "button");
+                boardCard.setAttribute("tabindex", "0");
+
+                boardCard.innerHTML = `
+                    <div class="board-card-name">${escapeHtml(board.name)}</div>
+                    ${board.description ? `<div class="board-card-description">${escapeHtml(board.description)}</div>` : ""}
+                    <div class="board-card-menu">
+                        <button type="button" class="board-card-menu-button" aria-label="Board menu" title="Board menu">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <div class="board-card-menu-content">
+                            <button type="button" class="board-card-menu-delete" data-board-id="${Number(board.id)}">
+                                <i class="bi bi-trash me-1"></i> Delete
+                            </button>
+                        </div>
+                    </div>`;
+
+                boardList.appendChild(boardCard);
+            }
+
+            if (boardCount) {
+                boardCount.textContent = document.querySelectorAll(".board-card").length;
+            }
+
+            const boardIdInput = document.getElementById("addTaskBoardId");
+            if (boardIdInput) boardIdInput.value = board.id;
+
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set("board_id", board.id);
+            window.history.replaceState({}, "", currentUrl.toString());
+
+            addBoardForm.reset();
+            if (addBoardModal) addBoardModal.hide();
+
+        })
+        .catch(function(error) {
+            console.error("Create board error:", error);
+
+            if (errorBox) {
+                errorBox.textContent = error.message || "Unable to create board.";
+                errorBox.classList.remove("d-none");
+            } else {
+                alert(error.message || "Unable to create board.");
+            }
+
+        })
+        .finally(function() {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+            }
+        });
+
+    });
+}
+
+
+/* =========================================================
    ADD / EDIT SUBMIT BUTTON CLICKS
 ========================================================= */
 
@@ -7357,33 +9051,6 @@ document.addEventListener(
 
         }
 
-
-        if (
-            event.target.closest(
-                "#editTaskSubmitBtn"
-            )
-        ) {
-
-            const taskId =
-                document.getElementById(
-                    "editTaskId"
-                ).value;
-
-
-            submitTaskForm(
-                "editTaskForm",
-                "edit.php?id=" +
-                encodeURIComponent(
-                    taskId
-                ),
-                "editTaskError",
-                "editTaskSubmitBtn"
-            );
-
-            return;
-
-        }
-
     }
 );
 
@@ -7396,6 +9063,172 @@ document.addEventListener(
 document.addEventListener(
     "click",
     function(event) {
+
+        /* =================================================
+           BOARD COLUMN + ADD BOARD
+        ================================================= */
+
+        const boardColumnAddBtn =
+            event.target.closest("#boardColumnAddBtn");
+
+        if (boardColumnAddBtn) {
+            event.preventDefault();
+            if (addBoardModal) addBoardModal.show();
+            return;
+        }
+
+
+        /* =================================================
+           BOARD CARD THREE-DOT MENU
+        ================================================= */
+
+        const boardMenuButton =
+            event.target.closest(".board-card-menu-button");
+
+        if (boardMenuButton) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const menu = boardMenuButton
+                .closest(".board-card-menu")
+                ?.querySelector(".board-card-menu-content");
+
+            document.querySelectorAll(".board-card-menu-content.show")
+                .forEach(function(item) {
+                    if (item !== menu) item.classList.remove("show");
+                });
+
+            if (menu) menu.classList.toggle("show");
+            return;
+        }
+
+
+        /* =================================================
+           DELETE BOARD FROM THREE-DOT MENU
+        ================================================= */
+
+        const boardDeleteBtn =
+            event.target.closest(".board-card-menu-delete");
+
+        if (boardDeleteBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const boardId = Number(boardDeleteBtn.dataset.boardId || 0);
+            const boardCard = boardDeleteBtn.closest(".board-card");
+            const boardName = boardCard
+                ? (boardCard.querySelector(".board-card-name")?.textContent.trim() || "this board")
+                : "this board";
+
+            if (boardId <= 0) return;
+
+            if (!confirm('Are you sure you want to delete "' + boardName + '"?\n\nA board can only be deleted when it has no tasks.')) {
+                return;
+            }
+
+            boardDeleteBtn.disabled = true;
+            boardDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            const formData = new FormData();
+            formData.append("action", "delete_board");
+            formData.append("board_id", boardId);
+
+            fetch("index.php", {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json"
+                },
+                body: formData
+            })
+            .then(async function(response) {
+                const raw = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(raw);
+                } catch (e) {
+                    console.error("Delete board returned non-JSON:", raw);
+                    throw new Error("The server returned an invalid response. Please check the PHP error/log.");
+                }
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || "Unable to delete board.");
+                }
+                return data;
+            })
+            .then(function() {
+                if (boardCard) boardCard.remove();
+
+                const remainingCards = document.querySelectorAll(".board-card");
+                const boardCount = document.querySelector(".board-task-column .column-count");
+                if (boardCount) boardCount.textContent = remainingCards.length;
+
+                const deletedWasSelected =
+                    Number(new URL(window.location.href).searchParams.get("board_id") || 0) === boardId;
+
+                if (deletedWasSelected) {
+                    const firstBoard = document.querySelector(".board-card");
+                    const currentUrl = new URL(window.location.href);
+
+                    if (firstBoard) {
+                        const firstBoardId = Number(firstBoard.dataset.boardId);
+                        currentUrl.searchParams.set("board_id", firstBoardId);
+                        window.history.replaceState({}, "", currentUrl.toString());
+
+                        document.querySelectorAll(".board-card").forEach(function(card) {
+                            card.classList.toggle("active", Number(card.dataset.boardId) === firstBoardId);
+                        });
+
+                        const boardIdInput = document.getElementById("addTaskBoardId");
+                        if (boardIdInput) boardIdInput.value = firstBoardId;
+                    } else {
+                        currentUrl.searchParams.delete("board_id");
+                        window.history.replaceState({}, "", currentUrl.toString());
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error("Delete board error:", error);
+                alert(error.message || "Unable to delete board.");
+            })
+            .finally(function() {
+                boardDeleteBtn.disabled = false;
+                boardDeleteBtn.innerHTML = '<i class="bi bi-trash me-1"></i> Delete';
+            });
+
+            return;
+        }
+
+
+        /* =================================================
+           CLOSE BOARD MENUS WHEN CLICKING ELSEWHERE
+        ================================================= */
+
+        if (!event.target.closest(".board-card-menu")) {
+            document.querySelectorAll(".board-card-menu-content.show")
+                .forEach(function(menu) { menu.classList.remove("show"); });
+        }
+
+
+        /* =================================================
+           SELECT BOARD IN THE SAME PAGE
+        ================================================= */
+
+        const boardCard = event.target.closest(".board-card");
+
+        if (boardCard) {
+            event.preventDefault();
+
+            const boardId = Number(boardCard.dataset.boardId || 0);
+
+            if (boardId > 0) {
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set("board_id", boardId);
+                window.location.href = currentUrl.toString();
+            }
+
+            return;
+        }
+
 
         /* =================================================
            TOP RIGHT "+ ADD BOARD" BUTTON
@@ -7412,26 +9245,6 @@ document.addEventListener(
             if (addBoardModal) {
                 addBoardModal.show();
             }
-
-            return;
-        }
-
-
-        /* =================================================
-           TOP RIGHT "+ ADD CARD/TASK" BUTTON
-        ================================================= */
-
-        const topAddTaskBtn =
-            event.target.closest(
-                "#topAddTaskBtn"
-            );
-
-        if (topAddTaskBtn) {
-            event.preventDefault();
-
-            openAddTaskModal(
-                topAddTaskBtn.dataset.progress || "Todo"
-            );
 
             return;
         }
@@ -7468,55 +9281,6 @@ document.addEventListener(
             openAddTaskModal(
                 progress
             );
-
-            return;
-
-        }
-
-
-        /* =================================================
-           EDIT LINK INSIDE TASK MENU
-        ================================================= */
-
-        const editLink =
-            event.target.closest(
-                'a[href^="edit.php?id="]'
-            );
-
-
-        if (editLink) {
-
-            event.preventDefault();
-
-
-            document
-                .querySelectorAll(
-                    ".task-menu-content.show"
-                )
-                .forEach(
-                    function(item) {
-
-                        item.classList.remove(
-                            "show"
-                        );
-
-                    }
-                );
-
-
-            const card =
-                editLink.closest(
-                    ".task-card"
-                );
-
-
-            if (card) {
-
-                openEditTaskModal(
-                    card
-                );
-
-            }
 
             return;
 

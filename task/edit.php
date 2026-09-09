@@ -348,8 +348,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     header("Content-Type: application/json");
 
                     echo json_encode([
-                        "success" => true,
-                        "message" => "Task updated successfully."
+                        "success"      => true,
+                        "message"      => "Task updated successfully.",
+                        "task"         => $task,
+                        "description"  => $description,
+                        "priority"     => $priority,
+                        "progress"     => $progress,
+                        "is_completed" => $is_completed,
+                        "status"       => $status,
+                        "edited"       => date("d M Y, h:i:s A")
                     ]);
 
                     exit();
