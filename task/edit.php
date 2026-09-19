@@ -64,10 +64,34 @@ $description = "";
 $status = 1;
 $priority = "Medium";
 $progress = "Todo";
-$is_completed = 0;
+$is_completed = "Incomplete";
 
 $error = "";
 $success = "";
+
+
+/* =========================================================
+   COMPLETION VALUE NORMALIZER
+   Safely converts legacy 1/0 values (or anything unexpected)
+   into one of the three valid text labels.
+========================================================= */
+
+function normalizeCompletionValue($value)
+{
+
+    $value = trim((string)$value);
+
+    if (in_array($value, ["Completed", "Pending", "Incomplete"], true)) {
+        return $value;
+    }
+
+    if ($value === "1") {
+        return "Completed";
+    }
+
+    return "Incomplete";
+
+}
 
 
 /* =========================================================
@@ -155,7 +179,7 @@ $progress =
     $task_data["progress"] ?? "Todo";
 
 $is_completed =
-    (int)($task_data["is_completed"] ?? 0);
+    normalizeCompletionValue($task_data["is_completed"] ?? "");
 
 
 /* =========================================================
@@ -184,8 +208,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $is_completed =
         isset($_POST["is_completed"])
-            ? (int)$_POST["is_completed"]
-            : 0;
+            ? (string)$_POST["is_completed"]
+            : "Incomplete";
 
 
     /* =====================================================
@@ -244,6 +268,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $allowed_progress = [
         "Todo",
         "In Progress",
+        "Pending",
         "Review",
         "Done"
     ];
@@ -265,12 +290,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
        VALIDATE COMPLETION
     ===================================================== */
 
+    $allowed_completion = [
+        "Incomplete",
+        "Pending",
+        "Completed"
+    ];
+
     if (
-        $is_completed !== 0 &&
-        $is_completed !== 1
+        !in_array(
+            $is_completed,
+            $allowed_completion,
+            true
+        )
     ) {
 
-        $is_completed = 0;
+        $is_completed = "Incomplete";
 
     }
 
@@ -284,7 +318,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($progress === "Done") {
 
-        $is_completed = 1;
+        $is_completed = "Completed";
 
     }
 
@@ -322,7 +356,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             mysqli_stmt_bind_param(
                 $update_stmt,
-                "ssissii",
+                "ssisssi",
                 $task,
                 $description,
                 $status,
@@ -1167,6 +1201,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </option>
 
                     <option
+                        value="Pending"
+                        <?= $progress === "Pending"
+                            ? "selected"
+                            : "" ?>
+                    >
+                        Pending
+                    </option>
+
+                    <option
                         value="Review"
                         <?= $progress === "Review"
                             ? "selected"
@@ -1251,8 +1294,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 >
 
                     <option
-                        value="0"
-                        <?= $is_completed === 0
+                        value="Incomplete"
+                        <?= $is_completed === "Incomplete"
                             ? "selected"
                             : "" ?>
                     >
@@ -1260,12 +1303,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </option>
 
                     <option
-                        value="1"
-                        <?= $is_completed === 1
+                        value="Pending"
+                        <?= $is_completed === "Pending"
                             ? "selected"
                             : "" ?>
                     >
-                        Complete
+                        Pending
+                    </option>
+
+                    <option
+                        value="Completed"
+                        <?= $is_completed === "Completed"
+                            ? "selected"
+                            : "" ?>
+                    >
+                        Completed
                     </option>
 
                 </select>

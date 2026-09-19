@@ -102,8 +102,18 @@ if (
 
     } elseif ($field === "is_completed") {
 
-        $bind_value = ((int)$value === 1) ? 1 : 0;
-        $bind_type  = "i";
+        $allowed_completion = ["Incomplete", "Pending", "Completed"];
+
+        if (!in_array($value, $allowed_completion, true)) {
+            echo json_encode([
+                "success" => false,
+                "message" => "Invalid completion value."
+            ]);
+            exit();
+        }
+
+        $bind_value = $value;
+        $bind_type  = "s";
 
     } elseif ($field === "description") {
 
@@ -124,7 +134,7 @@ if (
     if (!$update_stmt) {
         echo json_encode([
             "success" => false,
-            "message" => "Database error."
+            "message" => "Database error: " . mysqli_error($conn)
         ]);
         exit();
     }
@@ -137,13 +147,14 @@ if (
     );
 
     $update_ok = mysqli_stmt_execute($update_stmt);
+    $update_error = $update_ok ? "" : mysqli_stmt_error($update_stmt);
 
     mysqli_stmt_close($update_stmt);
 
     if (!$update_ok) {
         echo json_encode([
             "success" => false,
-            "message" => "Update failed."
+            "message" => "Update failed: " . $update_error
         ]);
         exit();
     }
@@ -178,6 +189,121 @@ if (
         "edited"  => $edited_display
     ]);
 
+    exit();
+
+}
+
+
+/* =========================================================
+   DRAG AND DROP STATUS UPDATE
+   BOTH ADMIN AND USER ARE ALLOWED
+
+   NOTE: This request never sends an "action" field, so it is
+   guarded on action being empty AND "progress" being present,
+   to avoid ever intercepting the create_board / delete_board
+   / update_task_field requests below. Placed here (before the
+   board list + full task-list queries) so drag-and-drop stays
+   fast instead of paying for a full board rebuild every time.
+========================================================= */
+
+if (
+    $_SERVER["REQUEST_METHOD"] === "POST" &&
+    (($_POST["action"] ?? "") === "" || ($_POST["action"] ?? "") === "update_progress") &&
+    isset($_POST["progress"])
+) {
+
+    $task_id = (int)($_POST["task_id"] ?? 0);
+
+    $new_progress = $_POST["progress"] ?? "";
+
+
+    $allowed_progress = [
+        "Todo",
+        "In Progress",
+        "Pending",
+        "Review",
+        "Done"
+    ];
+
+
+    $is_ajax_progress_request =
+        (($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "XMLHttpRequest") ||
+        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
+
+    $progress_response = ["success" => false];
+
+    if (
+        $task_id > 0 &&
+        in_array(
+            $new_progress,
+            $allowed_progress,
+            true
+        )
+    ) {
+
+        $update_sql = "
+            UPDATE tasks
+            SET
+                progress = ?,
+                editedDate = NOW()
+            WHERE id = ?
+        ";
+
+        $update_stmt = mysqli_prepare($conn, $update_sql);
+
+        if ($update_stmt) {
+            mysqli_stmt_bind_param(
+                $update_stmt,
+                "si",
+                $new_progress,
+                $task_id
+            );
+
+            $update_ok = mysqli_stmt_execute($update_stmt);
+
+            if ($update_ok) {
+                $progress_response = [
+                    "success" => true,
+                    "task_id" => $task_id,
+                    "progress" => $new_progress
+                ];
+            } else {
+                /*
+                 * IMPORTANT: read the statement error BEFORE closing the
+                 * prepared statement. Calling mysqli_stmt_error() after
+                 * mysqli_stmt_close() can lose the real MySQL error.
+                 */
+                $mysql_error = mysqli_stmt_error($update_stmt);
+                $progress_response["message"] = "MySQL error while updating task progress: " . $mysql_error;
+                $progress_response["mysql_error"] = $mysql_error;
+            }
+
+            mysqli_stmt_close($update_stmt);
+        } else {
+            $mysql_error = mysqli_error($conn);
+            $progress_response["message"] = "MySQL prepare error while updating task progress: " . $mysql_error;
+            $progress_response["mysql_error"] = $mysql_error;
+        }
+    } else {
+        $progress_response["message"] = "Invalid task or progress value.";
+    }
+
+    if ($is_ajax_progress_request) {
+        header("Content-Type: application/json; charset=UTF-8");
+        echo json_encode($progress_response);
+        exit();
+    }
+
+    if (!empty($progress_response["success"])) {
+        $redirect_board_id = (int)($_POST["board_id"] ?? 0);
+        header(
+            "Location: index.php" .
+            ($redirect_board_id > 0 ? "?board_id=" . $redirect_board_id : "")
+        );
+        exit();
+    }
+
+    header("Location: index.php");
     exit();
 
 }
@@ -680,6 +806,63 @@ function getProgressClass($progress)
 
 
 /* =========================================================
+   COMPLETION VALUE NORMALIZER
+   Safely converts legacy 1/0 values (or anything unexpected)
+   into one of the three valid text labels.
+========================================================= */
+
+function normalizeCompletionValue($value)
+{
+
+    $value = trim((string)$value);
+
+    if (in_array($value, ["Completed", "Pending", "Incomplete"], true)) {
+        return $value;
+    }
+
+    if ($value === "1") {
+        return "Completed";
+    }
+
+    return "Incomplete";
+
+}
+
+
+/* =========================================================
+   COMPLETION CLASS
+========================================================= */
+
+function getCompletionClass($completion)
+{
+
+    switch ($completion) {
+
+        case "Completed":
+
+            return "completed";
+
+
+        case "Pending":
+
+            return "pending";
+
+
+        case "Incomplete":
+
+            return "incomplete";
+
+
+        default:
+
+            return "incomplete";
+
+    }
+
+}
+
+
+/* =========================================================
    DATE FORMAT
 ========================================================= */
 
@@ -710,109 +893,6 @@ function formatTaskDate($date)
 
 }
 
-
-/* =========================================================
-   DRAG AND DROP STATUS UPDATE
-   BOTH ADMIN AND USER ARE ALLOWED
-========================================================= */
-
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
-    $task_id = (int)($_POST["task_id"] ?? 0);
-
-    $new_progress = $_POST["progress"] ?? "";
-
-
-    $allowed_progress = [
-        "Todo",
-        "In Progress",
-        "Pending",
-        "Review",
-        "Done"
-    ];
-
-
-    $is_ajax_progress_request =
-        (($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "XMLHttpRequest") ||
-        (strpos($_SERVER["HTTP_ACCEPT"] ?? "", "application/json") !== false);
-
-    $progress_response = ["success" => false];
-
-    if (
-        $task_id > 0 &&
-        in_array(
-            $new_progress,
-            $allowed_progress,
-            true
-        )
-    ) {
-
-        $update_sql = "
-            UPDATE tasks
-            SET
-                progress = ?,
-                editedDate = NOW()
-            WHERE id = ?
-        ";
-
-        $update_stmt = mysqli_prepare($conn, $update_sql);
-
-        if ($update_stmt) {
-            mysqli_stmt_bind_param(
-                $update_stmt,
-                "si",
-                $new_progress,
-                $task_id
-            );
-
-            $update_ok = mysqli_stmt_execute($update_stmt);
-
-            if ($update_ok) {
-                $progress_response = [
-                    "success" => true,
-                    "task_id" => $task_id,
-                    "progress" => $new_progress
-                ];
-            } else {
-                /*
-                 * IMPORTANT: read the statement error BEFORE closing the
-                 * prepared statement. Calling mysqli_stmt_error() after
-                 * mysqli_stmt_close() can lose the real MySQL error.
-                 */
-                $mysql_error = mysqli_stmt_error($update_stmt);
-                $progress_response["message"] = "MySQL error while updating task progress: " . $mysql_error;
-                $progress_response["mysql_error"] = $mysql_error;
-            }
-
-            mysqli_stmt_close($update_stmt);
-        } else {
-            $mysql_error = mysqli_error($conn);
-            $progress_response["message"] = "MySQL prepare error while updating task progress: " . $mysql_error;
-            $progress_response["mysql_error"] = $mysql_error;
-        }
-    } else {
-        $progress_response["message"] = "Invalid task or progress value.";
-    }
-
-    if ($is_ajax_progress_request) {
-        header("Content-Type: application/json; charset=UTF-8");
-        echo json_encode($progress_response);
-        exit();
-    }
-
-    if (!empty($progress_response["success"])) {
-        $redirect_board_id = (int)($_POST["board_id"] ?? 0);
-        header(
-            "Location: index.php" .
-            ($redirect_board_id > 0 ? "?board_id=" . $redirect_board_id : "")
-        );
-        exit();
-    }
-
-    header("Location: index.php");
-    exit();
-
-}
 
 ?>
 
@@ -981,6 +1061,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         gap: 12px;
     }
 
+
+    /* =====================================================
+       NAVBAR SEARCH
+    ===================================================== */
+
+    .nav-search-form {
+        margin: 0;
+    }
+
+    .nav-search-input-wrapper {
+        position: relative;
+        width: 320px;
+    }
+
+    .nav-search-input {
+        height: 42px;
+        width: 100%;
+        border: 1px solid #d6deea;
+        border-radius: 8px;
+        padding-left: 42px;
+        padding-right: 12px;
+        color: #172b4d;
+        background: #ffffff;
+    }
+
+    .nav-search-input:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.08);
+        outline: none;
+    }
+
+    .nav-search-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+        z-index: 2;
+        color: #5f6f87;
+        pointer-events: none;
+    }
 
     /* =====================================================
        SEARCH
@@ -1324,6 +1445,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+    /* PENDING column */
+    .task-column[data-progress="Pending"] {
+        background: #e8f1ff;
+        border-color: #b8d3ff;
+    }
+
+
+    .task-column[data-progress="Pending"] .column-title {
+        color: #1769aa;
+    }
+
+
     .task-column:nth-child(3) {
         background: #fff8e9;
     }
@@ -1331,6 +1464,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .task-column:nth-child(4) {
         background: #eef9f2;
+    }
+
+    /* REVIEW column */
+    .task-column[data-progress="Review"] {
+        background: #fff1e6;
+        border-color: #f5b27a;
+    }
+
+    .task-column[data-progress="Review"] .column-title {
+        color: #c65d00;
+    }
+
+    /* DONE column */
+    .task-column[data-progress="Done"] {
+        background: #eaf7ef;
+        border-color: #9bd3ae;
+    }
+
+    .task-column[data-progress="Done"] .column-title {
+        color: #16803c;
     }
 
 
@@ -1650,6 +1803,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+    .completion-badge.pending {
+        background: #fff0b8;
+        color: #8a6200;
+    }
+
+
     .completion-badge i {
         margin-right: 4px;
     }
@@ -1862,6 +2021,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     .task-detail-value.complete {
         color: #198754;
+    }
+
+
+    .task-detail-value.pending {
+        color: #8a6200;
     }
 
 
@@ -2280,6 +2444,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+    .trello-chip.pending {
+        background: #fff0b8;
+        color: #8a6200;
+    }
+
+
     .trello-chip.incomplete {
         background: #f8d7da;
         color: #a42835;
@@ -2471,6 +2641,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ===================================================== */
 
     @media (max-width: 1250px) {
+        .nav-search-input-wrapper {
+            width: 260px;
+        }
+
 
         .search-box {
             width: 430px;
@@ -2657,6 +2831,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     @media (max-width: 500px) {
+        .nav-search-form {
+            width: 100%;
+            margin-right: 0 !important;
+            margin-bottom: 10px;
+        }
+
+        .nav-search-input-wrapper {
+            width: 100%;
+        }
+
 
         .search-box {
             grid-template-columns: 1fr;
@@ -2837,6 +3021,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         background: #fde8ea;
         color: #b42332;
         border-color: #f4c9ce;
+    }
+
+    .view-task-chip.completed.pending {
+        background: #fdf1c2;
+        color: #8a6200;
+        border-color: #f4e6ae;
     }
 
     @media (max-width: 767px) {
@@ -3049,6 +3239,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         background: #e3f5ea;
         color: #149447;
         border: 1px solid #c6ead6;
+        padding: 9px 16px;
+        font-size: 15px;
+    }
+
+    .task-details-modal.view-task-simple #modalTaskCompleted.pending {
+        background: #fff6da;
+        color: #8a6200;
+        border: 1px solid #f4e6ae;
         padding: 9px 16px;
         font-size: 15px;
     }
@@ -3438,6 +3636,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         color: #246044;
     }
 
+    .task-details-modal .trello-chip.pending {
+        background: #fdf1c2;
+        color: #8a6200;
+    }
+
     .task-details-modal .trello-chip.incomplete {
         background: #f9e0e3;
         color: #a42835;
@@ -3535,6 +3738,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <div class="d-flex align-items-center">
 
+        <form method="GET" class="nav-search-form me-3">
+            <div class="nav-search-input-wrapper">
+                <i class="bi bi-search nav-search-icon"></i>
+                <input
+                    type="text"
+                    name="search"
+                    class="form-control nav-search-input"
+                    placeholder="Search tasks..."
+                    value="<?= htmlspecialchars($search) ?>"
+                    aria-label="Search tasks"
+                >
+                <input
+                    type="hidden"
+                    name="progress"
+                    value="<?= htmlspecialchars($progress_filter) ?>"
+                >
+            </div>
+        </form>
+
         <span class="welcome-text me-3">
 
             Welcome,
@@ -3592,54 +3814,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     <div class="board-controls">
-
-
-        <form
-            method="GET"
-            class="search-box"
-        >
-
-            <div class="search-input-wrapper">
-
-                <i class="bi bi-search search-icon"></i>
-
-
-                <input
-                    type="text"
-                    name="search"
-                    class="form-control"
-                    placeholder="Search tasks..."
-                    value="<?= htmlspecialchars($search) ?>"
-                >
-
-
-                <input
-                    type="hidden"
-                    name="progress"
-                    value="<?= htmlspecialchars($progress_filter) ?>"
-                >
-
-            </div>
-
-
-            <button
-                type="submit"
-                class="btn btn-primary search-btn"
-            >
-                <i class="bi bi-search"></i>
-                Search
-            </button>
-
-
-            <a
-                href="?progress=<?= urlencode($progress_filter) ?>"
-                class="btn clear-search-btn"
-            >
-                <i class="bi bi-x-lg"></i>
-                Clear
-            </a>
-
-        </form>
 
 
         <div class="task-filter">
@@ -3793,7 +3967,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 data-task-board-name="<?= htmlspecialchars($selected_board["name"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
                 data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-completed="<?= htmlspecialchars(normalizeCompletionValue($task["is_completed"] ?? "")) ?>"
                 data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
                 data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
                 data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
@@ -3839,27 +4013,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </span>
 
 
-                    <?php if ((int)$task["is_completed"] === 1): ?>
+                    <?php
+                        $completion_value = normalizeCompletionValue($task["is_completed"] ?? "");
+                    ?>
 
-                        <span class="completion-badge completed">
+                    <span class="completion-badge <?= htmlspecialchars(getCompletionClass($completion_value)) ?>">
 
-                            <i class="bi bi-check-circle-fill"></i>
+                        <?php if ($completion_value === "Completed"): ?>
+                            <i class="bi bi-check-circle-fill"></i> Completed
+                        <?php elseif ($completion_value === "Pending"): ?>
+                            <i class="bi bi-hourglass-split"></i> Pending
+                        <?php else: ?>
+                            <i class="bi bi-circle"></i> Incomplete
+                        <?php endif; ?>
 
-                            Completed
-
-                        </span>
-
-                    <?php else: ?>
-
-                        <span class="completion-badge incomplete">
-
-                            <i class="bi bi-circle"></i>
-
-                            Incomplete
-
-                        </span>
-
-                    <?php endif; ?>
+                    </span>
 
                 </div>
 
@@ -3923,6 +4091,154 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <?php endif; ?>
 
+
+            </div>
+
+        <?php endforeach; ?>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     PENDING
+========================================================= -->
+
+<div
+    class="task-column"
+    data-progress="Pending"
+>
+
+    <div class="column-header">
+
+        <span class="column-title">
+            PENDING
+        </span>
+
+        <span class="column-count">
+            <?= count($pending_tasks) ?>
+        </span>
+
+        <?php if ($is_admin): ?>
+
+            <a
+                href="add.php?progress=Pending"
+                class="column-add-btn"
+                title="Add task to PENDING"
+                aria-label="Add task to PENDING"
+            >
+                <i class="bi bi-plus"></i>
+            </a>
+
+        <?php endif; ?>
+
+    </div>
+
+
+    <div class="task-list">
+
+        <?php foreach ($pending_tasks as $task): ?>
+
+            <div
+                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
+                draggable="true"
+                data-task-id="<?= (int)$task["id"] ?>"
+                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-board-name="<?= htmlspecialchars($selected_board["name"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
+                data-task-completed="<?= htmlspecialchars(normalizeCompletionValue($task["is_completed"] ?? "")) ?>"
+                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
+                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
+            >
+
+                <div class="task-title">
+                    <?= htmlspecialchars($task["task"]) ?>
+                </div>
+
+                <?php if ($selected_board): ?>
+                    <div class="task-board-name-badge">
+                        <i class="bi bi-kanban"></i>
+                        <?= htmlspecialchars($selected_board["name"]) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($task["description"])): ?>
+                    <div class="task-description">
+                        <?= nl2br(htmlspecialchars($task["description"])) ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="task-meta">
+                    <span class="priority-badge">
+                        <?= htmlspecialchars($task["priority"]) ?>
+                    </span>
+
+                    <span
+                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
+                    >
+                        <?= htmlspecialchars($task["progress"]) ?>
+                    </span>
+
+                    <?php
+                        $completion_value = normalizeCompletionValue($task["is_completed"] ?? "");
+                    ?>
+                    <span class="completion-badge <?= htmlspecialchars(getCompletionClass($completion_value)) ?>">
+                        <?php if ($completion_value === "Completed"): ?>
+                            <i class="bi bi-check-circle-fill"></i> Completed
+                        <?php elseif ($completion_value === "Pending"): ?>
+                            <i class="bi bi-hourglass-split"></i> Pending
+                        <?php else: ?>
+                            <i class="bi bi-circle"></i> Incomplete
+                        <?php endif; ?>
+                    </span>
+                </div>
+
+                <?php if (!empty($task["editedDate"])): ?>
+                    <div class="task-date">
+                        <i class="bi bi-clock"></i>
+                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
+                    </div>
+                <?php elseif (!empty($task["addedDate"])): ?>
+                    <div class="task-date">
+                        <i class="bi bi-clock"></i>
+                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
+                    </div>
+                <?php endif; ?>
+                <?php if ($is_admin): ?>
+
+                    <div class="task-menu">
+                        <button
+                            type="button"
+                            class="task-menu-button"
+                            aria-label="Task menu"
+                        >
+                            ⋮
+                        </button>
+
+                        <div class="task-menu-content">
+                            <a
+                                href="#"
+                                class="task-view-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                View
+                            </a>
+
+                            <a
+                                href="delete.php?id=<?= (int)$task["id"] ?>"
+                                class="delete-link"
+                                data-task-id="<?= (int)$task["id"] ?>"
+                            >
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+
+                <?php endif; ?>
 
             </div>
 
@@ -3980,9 +4296,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 data-task-id="<?= (int)$task["id"] ?>"
                 data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-board-name="<?= htmlspecialchars($selected_board["name"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
                 data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-completed="<?= htmlspecialchars(normalizeCompletionValue($task["is_completed"] ?? "")) ?>"
                 data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
                 data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
                 data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
@@ -4031,27 +4348,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </span>
 
 
-                    <?php if ((int)$task["is_completed"] === 1): ?>
+                    <?php
+                        $completion_value = normalizeCompletionValue($task["is_completed"] ?? "");
+                    ?>
 
-                        <span class="completion-badge completed">
+                    <span class="completion-badge <?= htmlspecialchars(getCompletionClass($completion_value)) ?>">
 
-                            <i class="bi bi-check-circle-fill"></i>
+                        <?php if ($completion_value === "Completed"): ?>
+                            <i class="bi bi-check-circle-fill"></i> Completed
+                        <?php elseif ($completion_value === "Pending"): ?>
+                            <i class="bi bi-hourglass-split"></i> Pending
+                        <?php else: ?>
+                            <i class="bi bi-circle"></i> Incomplete
+                        <?php endif; ?>
 
-                            Completed
-
-                        </span>
-
-                    <?php else: ?>
-
-                        <span class="completion-badge incomplete">
-
-                            <i class="bi bi-circle"></i>
-
-                            Incomplete
-
-                        </span>
-
-                    <?php endif; ?>
+                    </span>
 
                 </div>
 
@@ -4111,152 +4422,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         </div>
 
-                    </div>
-
-                <?php endif; ?>
-
-            </div>
-
-        <?php endforeach; ?>
-
-    </div>
-
-</div>
-
-
-<!-- =========================================================
-     PENDING
-========================================================= -->
-
-<div
-    class="task-column"
-    data-progress="Pending"
->
-
-    <div class="column-header">
-
-        <span class="column-title">
-            PENDING
-        </span>
-
-        <span class="column-count">
-            <?= count($pending_tasks) ?>
-        </span>
-
-        <?php if ($is_admin): ?>
-
-            <a
-                href="add.php?progress=Pending"
-                class="column-add-btn"
-                title="Add task to PENDING"
-                aria-label="Add task to PENDING"
-            >
-                <i class="bi bi-plus"></i>
-            </a>
-
-        <?php endif; ?>
-
-    </div>
-
-
-    <div class="task-list">
-
-        <?php foreach ($pending_tasks as $task): ?>
-
-            <div
-                class="task-card <?= htmlspecialchars(getPriorityClass($task["priority"])) ?>"
-                draggable="true"
-                data-task-id="<?= (int)$task["id"] ?>"
-                data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
-                data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
-                data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
-                data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
-                data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
-            >
-
-                <div class="task-title">
-                    <?= htmlspecialchars($task["task"]) ?>
-                </div>
-
-                <?php if ($selected_board): ?>
-                    <div class="task-board-name-badge">
-                        <i class="bi bi-kanban"></i>
-                        <?= htmlspecialchars($selected_board["name"]) ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($task["description"])): ?>
-                    <div class="task-description">
-                        <?= nl2br(htmlspecialchars($task["description"])) ?>
-                    </div>
-                <?php endif; ?>
-
-                <div class="task-meta">
-                    <span class="priority-badge">
-                        <?= htmlspecialchars($task["priority"]) ?>
-                    </span>
-
-                    <span
-                        class="progress-badge <?= htmlspecialchars(getProgressClass($task["progress"])) ?>"
-                    >
-                        <?= htmlspecialchars($task["progress"]) ?>
-                    </span>
-
-                    <?php if ((int)$task["is_completed"] === 1): ?>
-                        <span class="completion-badge completed">
-                            <i class="bi bi-check-circle-fill"></i>
-                            Completed
-                        </span>
-                    <?php else: ?>
-                        <span class="completion-badge incomplete">
-                            <i class="bi bi-circle"></i>
-                            Incomplete
-                        </span>
-                    <?php endif; ?>
-                </div>
-
-                <?php if (!empty($task["editedDate"])): ?>
-                    <div class="task-date">
-                        <i class="bi bi-clock"></i>
-                        <?= htmlspecialchars(formatTaskDate($task["editedDate"])) ?>
-                    </div>
-                <?php elseif (!empty($task["addedDate"])): ?>
-                    <div class="task-date">
-                        <i class="bi bi-clock"></i>
-                        <?= htmlspecialchars(formatTaskDate($task["addedDate"])) ?>
-                    </div>
-                <?php endif; ?>
-                <?php if ($is_admin): ?>
-
-                    <div class="task-menu">
-                        <button
-                            type="button"
-                            class="task-menu-button"
-                            aria-label="Task menu"
-                        >
-                            ⋮
-                        </button>
-
-                        <div class="task-menu-content">
-                            <a
-                                href="#"
-                                class="task-view-link"
-                                data-task-id="<?= (int)$task["id"] ?>"
-                            >
-                                View
-                            </a>
-
-                            <a
-                                href="delete.php?id=<?= (int)$task["id"] ?>"
-                                class="delete-link"
-                                data-task-id="<?= (int)$task["id"] ?>"
-                            >
-                                Delete
-                            </a>
-                        </div>
                     </div>
 
                 <?php endif; ?>
@@ -4317,9 +4482,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 data-task-id="<?= (int)$task["id"] ?>"
                 data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-board-name="<?= htmlspecialchars($selected_board["name"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
                 data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-completed="<?= htmlspecialchars(normalizeCompletionValue($task["is_completed"] ?? "")) ?>"
                 data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
                 data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
                 data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
@@ -4368,27 +4534,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </span>
 
 
-                    <?php if ((int)$task["is_completed"] === 1): ?>
+                    <?php
+                        $completion_value = normalizeCompletionValue($task["is_completed"] ?? "");
+                    ?>
 
-                        <span class="completion-badge completed">
+                    <span class="completion-badge <?= htmlspecialchars(getCompletionClass($completion_value)) ?>">
 
-                            <i class="bi bi-check-circle-fill"></i>
+                        <?php if ($completion_value === "Completed"): ?>
+                            <i class="bi bi-check-circle-fill"></i> Completed
+                        <?php elseif ($completion_value === "Pending"): ?>
+                            <i class="bi bi-hourglass-split"></i> Pending
+                        <?php else: ?>
+                            <i class="bi bi-circle"></i> Incomplete
+                        <?php endif; ?>
 
-                            Completed
-
-                        </span>
-
-                    <?php else: ?>
-
-                        <span class="completion-badge incomplete">
-
-                            <i class="bi bi-circle"></i>
-
-                            Incomplete
-
-                        </span>
-
-                    <?php endif; ?>
+                    </span>
 
                 </div>
 
@@ -4508,9 +4668,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 data-task-id="<?= (int)$task["id"] ?>"
                 data-task-title="<?= htmlspecialchars($task["task"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-description="<?= htmlspecialchars($task["description"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
+                data-task-board-name="<?= htmlspecialchars($selected_board["name"] ?? "", ENT_QUOTES, 'UTF-8') ?>"
                 data-task-priority="<?= htmlspecialchars($task["priority"], ENT_QUOTES, 'UTF-8') ?>"
                 data-task-progress="<?= htmlspecialchars($task["progress"], ENT_QUOTES, 'UTF-8') ?>"
-                data-task-completed="<?= ((int)$task["is_completed"] === 1) ? "Complete" : "Incomplete" ?>"
+                data-task-completed="<?= htmlspecialchars(normalizeCompletionValue($task["is_completed"] ?? "")) ?>"
                 data-task-status="<?= ((int)$task["status"] === 1) ? "Active" : "Inactive" ?>"
                 data-task-added="<?= htmlspecialchars(formatTaskDate($task["addedDate"]), ENT_QUOTES, 'UTF-8') ?>"
                 data-task-edited="<?= htmlspecialchars(formatTaskDate($task["editedDate"]), ENT_QUOTES, 'UTF-8') ?>"
@@ -4559,27 +4720,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </span>
 
 
-                    <?php if ((int)$task["is_completed"] === 1): ?>
+                    <?php
+                        $completion_value = normalizeCompletionValue($task["is_completed"] ?? "");
+                    ?>
 
-                        <span class="completion-badge completed">
+                    <span class="completion-badge <?= htmlspecialchars(getCompletionClass($completion_value)) ?>">
 
-                            <i class="bi bi-check-circle-fill"></i>
+                        <?php if ($completion_value === "Completed"): ?>
+                            <i class="bi bi-check-circle-fill"></i> Completed
+                        <?php elseif ($completion_value === "Pending"): ?>
+                            <i class="bi bi-hourglass-split"></i> Pending
+                        <?php else: ?>
+                            <i class="bi bi-circle"></i> Incomplete
+                        <?php endif; ?>
 
-                            Completed
-
-                        </span>
-
-                    <?php else: ?>
-
-                        <span class="completion-badge incomplete">
-
-                            <i class="bi bi-circle"></i>
-
-                            Incomplete
-
-                        </span>
-
-                    <?php endif; ?>
+                    </span>
 
                 </div>
 
@@ -4769,7 +4924,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="trello-card-header-text">
 
                 <span class="trello-card-eyebrow">
-                    Task details
+                    Card Details
                 </span>
 
                 <h5
@@ -5002,6 +5157,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <div class="trello-sidebar-item">
 
                         <span class="trello-sidebar-item-label">
+                            Board
+                        </span>
+
+                        <span
+                            class="task-detail-value trello-chip"
+                            id="modalTaskBoardName"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div class="trello-sidebar-item">
+
+                        <span class="trello-sidebar-item-label">
                             Priority
                         </span>
 
@@ -5076,22 +5247,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <div class="trello-sidebar-item">
 
                         <span class="trello-sidebar-item-label">
-                            Board
-                        </span>
-
-                        <span
-                            class="task-detail-value trello-chip"
-                            id="modalTaskBoardName"
-                        >
-                            —
-                        </span>
-
-                    </div>
-
-
-                    <div class="trello-sidebar-item">
-
-                        <span class="trello-sidebar-item-label">
                             Completion
                         </span>
 
@@ -5109,8 +5264,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 id="modalTaskCompletedSelect"
                                 data-field="is_completed"
                             >
-                                <option value="1">Completed</option>
-                                <option value="0">Incomplete</option>
+                                <option value="Incomplete">Incomplete</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Completed">Completed</option>
                             </select>
 
                         </div>
@@ -6609,7 +6765,7 @@ function openTaskDetails(card)
 
     setModalValue(
         "modalTaskCompleted",
-        taskCompleted === "Complete" ? "Completed" : "Incomplete"
+        taskCompleted
     );
 
     setModalValue(
@@ -6676,16 +6832,26 @@ function openTaskDetails(card)
 
         completedElement.classList.remove(
             "complete",
+            "pending",
             "incomplete"
         );
 
 
         if (
-            taskCompleted === "Complete"
+            taskCompleted === "Completed"
         ) {
 
             completedElement.classList.add(
                 "complete"
+            );
+
+        }
+        else if (
+            taskCompleted === "Pending"
+        ) {
+
+            completedElement.classList.add(
+                "pending"
             );
 
         }
@@ -6730,8 +6896,7 @@ function openTaskDetails(card)
         );
 
     if (completedSelect) {
-        completedSelect.value =
-            (taskCompleted === "Complete") ? "1" : "0";
+        completedSelect.value = taskCompleted;
     }
 
 
@@ -6843,7 +7008,7 @@ function enterTaskDetailsEditMode()
     taskDetailsEditSnapshot = {
         priority: prioritySelect ? prioritySelect.value : "",
         progress: progressSelect ? progressSelect.value : "",
-        is_completed: completedSelect ? completedSelect.value : "0",
+        is_completed: completedSelect ? completedSelect.value : "Incomplete",
         description: descriptionInput ? descriptionInput.value : ""
     };
 
@@ -6906,7 +7071,7 @@ function saveTaskDetailsEdit()
     const values = {
         priority: prioritySelect ? prioritySelect.value : "",
         progress: progressSelect ? progressSelect.value : "",
-        is_completed: completedSelect ? completedSelect.value : "0",
+        is_completed: completedSelect ? completedSelect.value : "Incomplete",
         description: descriptionInput ? descriptionInput.value : ""
     };
 
@@ -6924,11 +7089,8 @@ function saveTaskDetailsEdit()
 
     fields.forEach(function(field) {
         chain = chain.then(function() {
-            return new Promise(function(resolve, reject) {
-                saveTaskField(currentTaskId, field, values[field], function(data) {
-                    saved[field] = data;
-                    resolve();
-                });
+            return saveTaskField(currentTaskId, field, values[field], function(data) {
+                saved[field] = data;
             });
         });
     });
@@ -6936,7 +7098,7 @@ function saveTaskDetailsEdit()
     chain.then(function() {
         setModalValue("modalTaskPriority", values.priority);
         setModalValue("modalTaskProgress", values.progress);
-        setModalValue("modalTaskCompleted", values.is_completed === "1" ? "Completed" : "Incomplete");
+        setModalValue("modalTaskCompleted", values.is_completed);
         const editedDisplay =
             saved.description?.edited ||
             saved.is_completed?.edited ||
@@ -7212,11 +7374,12 @@ function updateCardAfterFieldChange(taskId, field, value, editedDisplay)
     }
     else if (field === "is_completed") {
 
-        const isComplete =
-            (String(value) === "1");
+        const completionValue =
+            (String(value) === "Completed" || String(value) === "Pending")
+                ? String(value)
+                : "Incomplete";
 
-        card.dataset.taskCompleted =
-            isComplete ? "Complete" : "Incomplete";
+        card.dataset.taskCompleted = completionValue;
 
         const badge =
             card.querySelector(".completion-badge");
@@ -7225,17 +7388,23 @@ function updateCardAfterFieldChange(taskId, field, value, editedDisplay)
 
             badge.classList.remove(
                 "completed",
+                "pending",
                 "incomplete"
             );
 
-            badge.classList.add(
-                isComplete ? "completed" : "incomplete"
-            );
+            let badgeClass = "incomplete";
+            let badgeHtml = '<i class="bi bi-circle"></i> Incomplete';
 
-            badge.innerHTML =
-                isComplete ?
-                    '<i class="bi bi-check-circle-fill"></i> Completed' :
-                    '<i class="bi bi-circle"></i> Incomplete';
+            if (completionValue === "Completed") {
+                badgeClass = "completed";
+                badgeHtml = '<i class="bi bi-check-circle-fill"></i> Completed';
+            } else if (completionValue === "Pending") {
+                badgeClass = "pending";
+                badgeHtml = '<i class="bi bi-hourglass-split"></i> Pending';
+            }
+
+            badge.classList.add(badgeClass);
+            badge.innerHTML = badgeHtml;
 
         }
 
@@ -7413,12 +7582,16 @@ function openViewTask(card)
     if (editedElement) editedElement.textContent = edited;
 
     if (completedElement) {
-        completedElement.textContent =
-            completed === "Complete" ? "Complete" : "Incomplete";
+        completedElement.textContent = completed;
+
+        completedElement.classList.toggle(
+            "pending",
+            completed === "Pending"
+        );
 
         completedElement.classList.toggle(
             "incomplete",
-            completed !== "Complete"
+            completed !== "Completed" && completed !== "Pending"
         );
     }
 
@@ -8413,6 +8586,7 @@ function saveTaskProgress(
     }
 
     const formData = new FormData();
+    formData.append("action", "update_progress");
     formData.append("task_id", taskId);
     formData.append("progress", progress);
     formData.append("board_id", <?= (int)$selected_board_id ?>);
