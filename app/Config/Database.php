@@ -26,10 +26,10 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'localhost',
-        'username'     => '',
-        'password'     => '',
-        'database'     => '',
+        'hostname'     => env('DB_HOST', 'localhost'),
+        'username'     => env('DB_USERNAME', ''),
+        'password'     => env('DB_PASSWORD', ''),
+        'database'     => env('DB_NAME', ''),
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
@@ -41,7 +41,7 @@ class Database extends Config
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => 3306,
+        'port'         => (int) env('DB_PORT', 3306),
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [
@@ -87,12 +87,12 @@ class Database extends Config
     //        'schema'     => 'public',
     //        'DBDriver'   => 'Postgre',
     //        'DBPrefix'   => '',
-    //        'pConnect'   => false,
-    //        'DBDebug'    => true,
-    //        'charset'    => 'utf8',
-    //        'swapPre'    => '',
-    //        'failover'   => [],
-    //        'port'       => 5432,
+    //        'pConnect'  => false,
+    //        'DBDebug'   => true,
+    //        'charset'   => 'utf8',
+    //        'swapPre'   => '',
+    //        'failover'  => [],
+    //        'port'      => 5432,
     //        'dateFormat' => [
     //            'date'     => 'Y-m-d',
     //            'datetime' => 'Y-m-d H:i:s',
@@ -114,13 +114,16 @@ class Database extends Config
     //        'schema'     => 'dbo',
     //        'DBDriver'   => 'SQLSRV',
     //        'DBPrefix'   => '',
-    //        'pConnect'   => false,
-    //        'DBDebug'    => true,
-    //        'charset'    => 'utf8',
-    //        'swapPre'    => '',
-    //        'encrypt'    => false,
-    //        'failover'   => [],
-    //        'port'       => 1433,
+    //        'pConnect'  => false,
+    //        'DBDebug'   => true,
+    //        'charset'   => 'utf8',
+    //        'DBCollat'   => 'utf8_general_ci',
+    //        'swapPre'   => '',
+    //        'encrypt'   => false,
+    //        'compress'  => false,
+    //        'strictOn'  => false,
+    //        'failover'  => [],
+    //        'port'      => 1433,
     //        'dateFormat' => [
     //            'date'     => 'Y-m-d',
     //            'datetime' => 'Y-m-d H:i:s',
@@ -134,7 +137,7 @@ class Database extends Config
     //     * You may need the following environment variables:
     //     *   NLS_LANG                = 'AMERICAN_AMERICA.UTF8'
     //     *   NLS_DATE_FORMAT         = 'YYYY-MM-DD HH24:MI:SS'
-    //     *   NLS_TIMESTAMP_FORMAT    = 'YYYY-MM-DD HH24:MI:SS'
+    //     *   NLS_TIMESTAMP_FORMAT   = 'YYYY-MM-DD HH24:MI:SS'
     //     *   NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS'
     //     *
     //     * @var array<string, mixed>
@@ -148,7 +151,6 @@ class Database extends Config
     //        'pConnect'   => false,
     //        'DBDebug'    => true,
     //        'charset'    => 'AL32UTF8',
-    //        'swapPre'    => '',
     //        'failover'   => [],
     //        'dateFormat' => [
     //            'date'     => 'Y-m-d',
@@ -169,15 +171,12 @@ class Database extends Config
         'password'    => '',
         'database'    => ':memory:',
         'DBDriver'    => 'SQLite3',
-        'DBPrefix'    => 'db_',  // Needed to ensure we're working correctly with prefixes live. DO NOT REMOVE FOR CI DEVS
-        'pConnect'    => false,
-        'DBDebug'     => true,
+        'DBPrefix'    => 'db_',
+        'pConnect'   => false,
+        'DBDebug'    => true,
         'charset'     => 'utf8',
         'DBCollat'    => '',
         'swapPre'     => '',
-        'encrypt'     => false,
-        'compress'    => false,
-        'strictOn'    => true,
         'failover'    => [],
         'port'        => 3306,
         'foreignKeys' => true,
