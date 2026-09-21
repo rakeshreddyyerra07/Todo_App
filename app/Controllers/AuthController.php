@@ -25,7 +25,7 @@ class AuthController extends BaseController
         /*
         | Already logged in
         */
-        if ($this->session->has('user_id')) {
+        if ($this->session->get('user_id')) {
             return redirect()->to('/tasks');
         }
 
@@ -47,7 +47,7 @@ class AuthController extends BaseController
         /*
         | Already logged in
         */
-        if ($this->session->has('user_id')) {
+        if ($this->session->get('user_id')) {
             return redirect()->to('/tasks');
         }
 
@@ -380,8 +380,7 @@ class AuthController extends BaseController
                 */
 
                 $this->session->set([
-                    'user_id' =>
-                        $user['id'],
+                    'user_id' => (int) $user['id'],
 
                     'user_name' =>
                         $user['name'],
@@ -389,8 +388,7 @@ class AuthController extends BaseController
                     'user_email' =>
                         $user['email'],
 
-                    'user_role' =>
-                        $user['role']
+                    'user_role' => $this->normalizeRole($user['role'] ?? '')
                 ]);
 
 
@@ -584,7 +582,10 @@ class AuthController extends BaseController
                     true,
 
                 CURLOPT_TIMEOUT =>
-                    10,
+                    4,
+
+                CURLOPT_CONNECTTIMEOUT =>
+                    2,
 
                 CURLOPT_SSL_VERIFYPEER =>
                     true,
@@ -717,7 +718,10 @@ class AuthController extends BaseController
                     true,
 
                 CURLOPT_TIMEOUT =>
-                    10,
+                    4,
+
+                CURLOPT_CONNECTTIMEOUT =>
+                    2,
 
                 CURLOPT_SSL_VERIFYPEER =>
                     true,
@@ -851,7 +855,10 @@ class AuthController extends BaseController
                     true,
 
                 CURLOPT_TIMEOUT =>
-                    10,
+                    4,
+
+                CURLOPT_CONNECTTIMEOUT =>
+                    2,
 
                 CURLOPT_SSL_VERIFYPEER =>
                     true,
@@ -946,6 +953,9 @@ class AuthController extends BaseController
         $status
     ) {
 
+        try {
+
+
         $loginLogModel =
             new LoginLogModel();
 
@@ -969,5 +979,25 @@ class AuthController extends BaseController
             'status' =>
                 $status
         ]);
+
+        } catch (\Throwable $e) {
+            log_message('error', 'Login log could not be saved: ' . $e->getMessage());
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Normalize Role
+    |--------------------------------------------------------------------------
+    | 'Admin', ' admin ' or an empty value in the database still work
+    | (empty becomes 'user', like the original app).
+    */
+
+    private function normalizeRole($role): string
+    {
+        $role = strtolower(trim((string) $role));
+
+        return $role === '' ? 'user' : $role;
     }
 }

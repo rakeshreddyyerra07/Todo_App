@@ -22,9 +22,9 @@ $routes->get('/', 'Home::index');
 $routes->get('login', 'AuthController::login');
 $routes->post('login', 'AuthController::authenticate');
 
-$routes->match(['get', 'post'], 'register', 'AccountController::register');
-$routes->match(['get', 'post'], 'forgot-password', 'AccountController::forgotPassword');
-$routes->match(['get', 'post'], 'reset-password', 'AccountController::resetPassword');
+$routes->match(['GET', 'POST'], 'register', 'AccountController::register');
+$routes->match(['GET', 'POST'], 'forgot-password', 'AccountController::forgotPassword');
+$routes->match(['GET', 'POST'], 'reset-password', 'AccountController::resetPassword');
 $routes->get('logout', 'AccountController::logout');
 
 /*
@@ -36,7 +36,7 @@ $routes->get('tasks', 'TaskController::index', $auth);
 $routes->get('tasks/add', 'TaskController::add', $auth);
 $routes->post('tasks/create', 'TaskController::create', $auth);
 $routes->get('tasks/view/(:num)', 'TaskController::show/$1', $auth);
-$routes->match(['get', 'post'], 'tasks/edit/(:num)', 'TaskController::edit/$1', $auth);
+$routes->match(['GET', 'POST'], 'tasks/edit/(:num)', 'TaskController::edit/$1', $auth);
 $routes->get('tasks/delete/(:num)', 'TaskController::delete/$1', $auth);
 $routes->get('tasks/toggle/(:num)', 'TaskController::toggle/$1', $auth);
 $routes->post('tasks/update-field', 'TaskController::updateField', $auth);
