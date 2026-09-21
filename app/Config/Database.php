@@ -26,13 +26,13 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => env('DB_HOST', 'localhost'),
-        'username'     => env('DB_USERNAME', ''),
-        'password'     => env('DB_PASSWORD', ''),
-        'database'     => env('DB_NAME', ''),
+        'hostname'     => 'localhost',
+        'username'     => '',
+        'password'     => '',
+        'database'     => '',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
-        'pConnect'     => false,
+        'pConnect'    => false,
         'DBDebug'      => true,
         'charset'      => 'utf8mb4',
         'DBCollat'     => 'utf8mb4_general_ci',
@@ -41,7 +41,7 @@ class Database extends Config
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => (int) env('DB_PORT', 3306),
+        'port'         => 3306,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [
@@ -87,8 +87,8 @@ class Database extends Config
     //        'schema'     => 'public',
     //        'DBDriver'   => 'Postgre',
     //        'DBPrefix'   => '',
-    //        'pConnect'  => false,
-    //        'DBDebug'   => true,
+    //        'pConnect'   => false,
+    //        'DBDebug'    => true,
     //        'charset'   => 'utf8',
     //        'swapPre'   => '',
     //        'failover'  => [],
@@ -150,8 +150,8 @@ class Database extends Config
     //        'DBPrefix'   => '',
     //        'pConnect'   => false,
     //        'DBDebug'    => true,
-    //        'charset'    => 'AL32UTF8',
-    //        'failover'   => [],
+    //        'charset'   => 'AL32UTF8',
+    //        'failover'  => [],
     //        'dateFormat' => [
     //            'date'     => 'Y-m-d',
     //            'datetime' => 'Y-m-d H:i:s',
@@ -192,6 +192,17 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
+
+        /*
+         * Load database settings from environment variables.
+         * This allows Wasmer to provide the database credentials
+         * without storing them directly in this PHP file.
+         */
+        $this->default['hostname'] = env('DB_HOST', 'localhost');
+        $this->default['username'] = env('DB_USERNAME', '');
+        $this->default['password'] = env('DB_PASSWORD', '');
+        $this->default['database'] = env('DB_NAME', '');
+        $this->default['port']     = (int) env('DB_PORT', 3306);
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
