@@ -1,0 +1,906 @@
+
+/* =========================================================
+   TODO APP - MODERN BLUE UI
+========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f4f7fc;
+    color: #17213d;
+    min-height: 100vh;
+}
+
+/* =========================================================
+   COMMON
+========================================================= */
+
+a {
+    text-decoration: none;
+}
+
+button,
+input {
+    font-family: inherit;
+}
+
+.container {
+    width: 92%;
+    max-width: 1250px;
+    margin: 40px auto;
+}
+
+/* =========================================================
+   NAVBAR
+========================================================= */
+
+.navbar {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid #e5ebf5;
+    box-shadow: 0 4px 20px rgba(35, 75, 140, 0.06);
+}
+
+.nav-container {
+    width: 92%;
+    max-width: 1250px;
+    margin: auto;
+    min-height: 78px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-size: 25px;
+    font-weight: 800;
+    color: #18213f;
+    letter-spacing: 0.3px;
+}
+
+.logo::first-letter {
+    color: #2878ee;
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 14px;
+    color: #485475;
+}
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 12px 35px rgba(40, 82, 150, 0.09);
+    border: 1px solid #eef2f8;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 470px;
+    margin: 60px auto;
+    padding: 38px;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 18px 45px rgba(46, 87, 150, 0.12);
+    border: 1px solid #edf2f9;
+}
+
+/* =========================================================
+   AUTH PAGE
+========================================================= */
+
+.auth-page {
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 30px;
+
+    background:
+        radial-gradient(circle at 10% 20%, #e9f2ff 0, transparent 25%),
+        radial-gradient(circle at 90% 80%, #e9f2ff 0, transparent 25%),
+        #f5f8fd;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.auth-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: linear-gradient(
+        135deg,
+        #4d9cff,
+        #1768e8
+    );
+
+    color: #ffffff;
+    font-size: 30px;
+
+    box-shadow:
+        0 10px 22px rgba(37, 120, 238, 0.25);
+}
+
+.auth-header h1 {
+    font-size: 28px;
+    font-weight: 750;
+    color: #17213d;
+    margin-bottom: 8px;
+}
+
+.auth-header p {
+    color: #74809c;
+    font-size: 14px;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #36415f;
+}
+
+.form-control {
+    width: 100%;
+    height: 48px;
+
+    padding: 0 15px;
+
+    border: 1px solid #dbe3f0;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    color: #1c2742;
+    font-size: 14px;
+
+    outline: none;
+
+    transition: 0.2s ease;
+}
+
+.form-control:focus {
+    border-color: #438cf2;
+
+    box-shadow:
+        0 0 0 3px rgba(67, 140, 242, 0.12);
+}
+
+.form-control::placeholder {
+    color: #9ca7bb;
+}
+
+/* =========================================================
+   CHECKBOX
+========================================================= */
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 13px;
+    color: #66718b;
+
+    margin: 10px 0 20px;
+}
+
+.checkbox-row input {
+    width: 16px;
+    height: 16px;
+    accent-color: #2878ee;
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 9px;
+
+    min-height: 40px;
+
+    padding: 0 16px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   PRIMARY
+========================================================= */
+
+.btn-primary,
+.btn-add {
+    color: #ffffff;
+
+    background: linear-gradient(
+        135deg,
+        #438ff4,
+        #176ce8
+    );
+
+    box-shadow:
+        0 7px 18px rgba(44, 124, 239, 0.22);
+}
+
+.btn-primary:hover,
+.btn-add:hover {
+    box-shadow:
+        0 10px 22px rgba(44, 124, 239, 0.30);
+}
+
+/* =========================================================
+   EDIT
+========================================================= */
+
+.btn-edit {
+    background: #eef5ff;
+    color: #176ce8;
+    margin-right: 5px;
+}
+
+.btn-edit:hover {
+    background: #dfecff;
+}
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+.btn-delete {
+    background: #fff0f1;
+    color: #ed4249;
+}
+
+.btn-delete:hover {
+    background: #ffe3e5;
+}
+
+/* =========================================================
+   MARK COMPLETE - GREEN
+========================================================= */
+
+.btn-complete {
+    background: #eaf8ef !important;
+    color: #249150 !important;
+    border: 1px solid #ccebd7 !important;
+    font-weight: 600;
+}
+
+.btn-complete:hover {
+    background: #d9f2e2 !important;
+    color: #1d7d43 !important;
+    border-color: #b9e3c8 !important;
+}
+
+/* =========================================================
+   MARK INCOMPLETE - ORANGE
+========================================================= */
+
+.btn-incomplete {
+    background: #fff7e6 !important;
+    color: #c77b00 !important;
+    border: 1px solid #ffe1a8 !important;
+    font-weight: 600;
+}
+
+.btn-incomplete:hover {
+    background: #ffedc2 !important;
+    color: #a86400 !important;
+    border-color: #ffd27a !important;
+}
+
+/* =========================================================
+   LINKS
+========================================================= */
+
+.auth-link {
+    text-align: center;
+    margin-top: 22px;
+
+    font-size: 14px;
+    color: #77829a;
+}
+
+.auth-link a {
+    color: #176ce8;
+    font-weight: 600;
+}
+
+.auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* =========================================================
+   ALERTS
+========================================================= */
+
+.alert {
+    padding: 12px 15px;
+
+    border-radius: 9px;
+
+    margin-bottom: 20px;
+
+    font-size: 14px;
+}
+
+.alert-error {
+    background: #fff0f1;
+    color: #cf3139;
+    border: 1px solid #ffd6d9;
+}
+
+.alert-success {
+    background: #edfff3;
+    color: #21864a;
+    border: 1px solid #d4f4df;
+}
+
+/* =========================================================
+   TASK PAGE HEADER
+========================================================= */
+
+.header-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 28px;
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 750;
+    color: #17213d;
+    margin-bottom: 6px;
+}
+
+.header-section p {
+    color: #7a859b;
+    font-size: 14px;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8faff;
+}
+
+th {
+    text-align: left;
+
+    padding: 15px;
+
+    color: #26314f;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    border-bottom: 1px solid #e9eef5;
+}
+
+td {
+    padding: 17px 15px;
+
+    font-size: 14px;
+
+    color: #48536d;
+
+    border-bottom: 1px solid #edf1f6;
+}
+
+tbody tr {
+    transition: 0.2s ease;
+}
+
+tbody tr:hover {
+    background: #fbfdff;
+}
+
+/* =========================================================
+   STATUS - ACTIVE
+========================================================= */
+
+.status-active {
+    display: inline-flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 7px 13px;
+
+    border-radius: 7px;
+
+    background-color: #eaf8ef !important;
+
+    color: #249150 !important;
+
+    border: 1px solid #d4f4df !important;
+
+    font-size: 12px;
+
+    font-weight: 700;
+}
+
+/* =========================================================
+   STATUS - INACTIVE RED
+========================================================= */
+
+.status-inactive {
+    display: inline-flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 7px 13px;
+
+    border-radius: 7px;
+
+    background-color: #fff0f1 !important;
+
+    color: #dc3545 !important;
+
+    border: 1px solid #f5c2c7 !important;
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    opacity: 1 !important;
+}
+
+/* =========================================================
+   ADMIN COLUMN PLUS BUTTON
+========================================================= */
+
+.column-add-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+
+    border: 1px solid #d6deea;
+    border-radius: 50%;
+
+    background: #ffffff;
+    color: #1473e6;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+
+    margin-left: auto;
+
+    text-decoration: none;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.column-add-btn:hover {
+    background: #1473e6;
+    color: #ffffff;
+    border-color: #1473e6;
+
+    transform: scale(1.08);
+}
+
+.column-add-btn:active {
+    transform: scale(0.96);
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer {
+    text-align: center;
+
+    color: #8993a8;
+
+    font-size: 13px;
+
+    padding: 25px 0;
+}
+
+/* =========================================================
+   EMPTY TASKS
+========================================================= */
+
+.empty-state {
+    text-align: center;
+    padding: 55px 20px;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    color: #26314f;
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    color: #8993a8;
+    font-size: 14px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .nav-container {
+        min-height: 68px;
+    }
+
+    .logo {
+        font-size: 21px;
+    }
+
+    .user-section span {
+        display: none;
+    }
+
+    .container {
+        width: 94%;
+        margin: 25px auto;
+    }
+
+    .card {
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    .auth-card {
+        padding: 25px;
+        margin: 20px auto;
+    }
+
+    .header-section {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .title {
+        font-size: 24px;
+    }
+
+    th,
+    td {
+        white-space: nowrap;
+    }
+
+    .column-add-btn {
+        width: 27px;
+        height: 27px;
+        min-width: 27px;
+        font-size: 16px;
+    }
+
+}
+
+@media (max-width: 480px) {
+
+    .auth-page {
+        padding: 15px;
+    }
+
+    .auth-card {
+        border-radius: 18px;
+    }
+
+    .auth-header h1 {
+        font-size: 24px;
+    }
+
+    .btn {
+        font-size: 13px;
+        padding: 0 13px;
+    }
+
+    .column-add-btn {
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
+        font-size: 15px;
+    }
+
+}
+
+
+/* =========================================================
+   TASK BOARD - COLUMN ONLY SCROLL
+   ONLY TASK LISTS SCROLL
+========================================================= */
+
+/*
+   IMPORTANT:
+   Do NOT use overflow:hidden on body here.
+   Other pages such as login/auth pages should continue
+   working normally.
+*/
+
+html,
+body {
+    height: 100%;
+}
+
+/*
+   Your index.php uses .board-wrapper.
+   Keep horizontal scrolling available.
+   Vertical page scrolling is disabled only for the board area.
+*/
+
+.board-wrapper {
+    width: 100%;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    padding-bottom: 15px;
+
+    /*
+       Allows the board to occupy the available screen.
+    */
+    min-height: 0;
+}
+
+/*
+   Your index.php uses .task-board.
+*/
+.task-board {
+    min-height: 0;
+
+    display: grid;
+
+    /*
+       Keep your existing four-column layout.
+    */
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(260px, 1fr)
+        );
+
+    gap: 18px;
+
+    min-width: 1050px;
+
+    /*
+       Important for column scrolling.
+    */
+    height: 100%;
+}
+
+/*
+   Individual task column.
+*/
+.task-column {
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+/*
+   Column header must remain fixed.
+*/
+.task-column .column-header {
+    flex: 0 0 auto;
+}
+
+/*
+   ONLY THIS AREA SCROLLS.
+*/
+.task-list {
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /*
+       Small spacing for scrollbar.
+    */
+    padding-right: 5px;
+
+    /*
+       Firefox.
+    */
+    scrollbar-width: thin;
+    scrollbar-color:
+        #cbd3df
+        transparent;
+}
+
+/*
+   Chrome / Edge / Safari scrollbar.
+*/
+.task-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+.task-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.task-list::-webkit-scrollbar-thumb {
+    background: #cbd3df;
+    border-radius: 10px;
+}
+
+.task-list::-webkit-scrollbar-thumb:hover {
+    background: #aeb8c7;
+}
+
+/*
+   Task cards should keep their normal size.
+*/
+.task-list > .task-card {
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   FIXED TASK BOARD SCREEN AREA
+========================================================= */
+
+/*
+   This class is optional.
+   If your index.php does not use it, it does nothing.
+*/
+.task-board-page {
+    height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   MOBILE BOARD
+========================================================= */
+
+@media (max-width: 768px) {
+
+    /*
+       Keep the board horizontally scrollable.
+    */
+    .board-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    /*
+       Keep all four columns horizontally available.
+    */
+    .task-board {
+        min-width: 1050px;
+
+        height: 100%;
+    }
+
+    /*
+       Each column remains fixed.
+    */
+    .task-column {
+        min-height: 0;
+
+        display: flex;
+        flex-direction: column;
+
+        overflow: hidden;
+    }
+
+    /*
+       Only the task list scrolls vertically.
+    */
+    .task-list {
+        min-height: 0;
+
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+}
+
+
+/* =========================================================
+   VERY SMALL SCREENS
+========================================================= */
+
+@media (max-width: 480px) {
+
+    .board-wrapper {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .task-board {
+        min-width: 1050px;
+    }
+
+    .task-list {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+}
+
