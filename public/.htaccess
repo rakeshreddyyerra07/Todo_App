@@ -31,8 +31,7 @@ Options -Indexes
 	# request to the front controller, index.php
 	RewriteCond %{REQUEST_FILENAME} !-f
 	RewriteCond %{REQUEST_FILENAME} !-d
-    # Send the root URL to CodeIgniter's front controller
-	RewriteRule ^$ index.php [L]
+	 
 	RewriteRule ^([\s\S]*)$ index.php?/$1 [L,NC,QSA]
 
 	# Ensure Authorization header is passed along
